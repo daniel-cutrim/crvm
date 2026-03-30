@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    --primary: 199 89% 38%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 199 30% 94%;
+    --secondary-foreground: 199 89% 28%;
+
+    --muted: 210 15% 95%;
+    --muted-foreground: 215 10% 45%;
+
+    --accent: 162 63% 41%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 90%;
+    --input: 214 20% 90%;
+    --ring: 199 89% 38%;
+
+    --radius: 0.625rem;
+
+    /* Custom semantic tokens */
+    --success: 162 63% 41%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 15%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --sidebar-bg: 215 28% 17%;
+    --sidebar-bg-hover: 215 25% 22%;
+    --sidebar-bg-active: 199 89% 38%;
+    --sidebar-text: 210 15% 70%;
+    --sidebar-text-active: 0 0% 100%;
+    --sidebar-border: 215 20% 25%;
+
+    --sidebar-background: 215 28% 17%;
+    --sidebar-foreground: 210 15% 70%;
+    --sidebar-primary: 199 89% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 25% 22%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 215 20% 25%;
+    --sidebar-ring: 199 89% 38%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+  }
+}
+
+@layer components {
+  .dental-card {
+    @apply bg-card rounded-xl border border-border shadow-sm transition-shadow hover:shadow-md;
+  }
+  .dental-stat {
+    @apply dental-card p-5;
+  }
+  .dental-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .dental-badge-success {
+    @apply bg-emerald-50 text-emerald-700;
+  }
+  .dental-badge-warning {
+    @apply bg-amber-50 text-amber-700;
+  }
+  .dental-badge-danger {
+    @apply bg-red-50 text-red-700;
+  }
+  .dental-badge-info {
+    @apply bg-sky-50 text-sky-700;
+  }
+  .dental-badge-default {
+    @apply bg-slate-100 text-slate-700;
+  }
+  .dental-input {
+    @apply w-full px-3 py-2.5 bg-white border border-border rounded-lg text-sm transition-all
+      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+      disabled:bg-muted disabled:text-muted-foreground placeholder:text-muted-foreground;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}

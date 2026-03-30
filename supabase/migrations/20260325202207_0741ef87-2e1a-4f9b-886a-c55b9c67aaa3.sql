@@ -1,0 +1,1 @@
+ALTER TABLE public.chat_conversas ADD COLUMN chat_lid text;

@@ -1,0 +1,2688 @@
+[
+  {
+    "id": "TC001",
+    "title": "Login with valid credentials lands on dashboard",
+    "description": "Verifies a user can sign in with email and password and reach the authenticated app shell dashboard.",
+    "category": "User Login",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Login with incorrect password shows invalid credentials error",
+    "description": "Verifies invalid credentials display an authentication error and user remains unauthenticated.",
+    "category": "User Login",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill an incorrect password into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an invalid credentials error message is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Forgot password request shows recovery email sent confirmation",
+    "description": "Verifies submitting a password recovery request provides a success confirmation in the UI.",
+    "category": "User Login",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Trigger the forgot password flow"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the recovery request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a confirmation that recovery instructions were sent is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Reset password page accepts a new password and confirms reset",
+    "description": "Verifies the reset password page allows entering a new password and shows a completion confirmation.",
+    "category": "User Login",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /reset-password"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid new password into the new password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the new password"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a password reset confirmation is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Login form blocks submission when email is missing",
+    "description": "Verifies the login form prevents submission and shows validation when required email is not provided.",
+    "category": "User Login",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an email validation error is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Login form blocks submission when password is missing",
+    "description": "Verifies the login form prevents submission and shows validation when required password is not provided.",
+    "category": "User Login",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a password validation error is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Sign up creates a new account and shows success confirmation",
+    "description": "Verifies switching to sign up mode and submitting valid details shows a success confirmation and enters the app.",
+    "category": "User Sign Up",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Switch to sign up mode"
+      },
+      {
+        "type": "action",
+        "description": "Fill Test User Signup into the full name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a unique email into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid password with at least 6 characters into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign up form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a sign up success confirmation is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Sign up enforces minimum password length",
+    "description": "Verifies the sign up form shows validation when password is shorter than the minimum length.",
+    "category": "User Sign Up",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Switch to sign up mode"
+      },
+      {
+        "type": "action",
+        "description": "Fill Test User Short Password into the full name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a unique email into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a password shorter than 6 characters into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign up form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a password length validation error is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Sign up blocks submission when full name is missing",
+    "description": "Verifies the sign up form requires a full name and shows validation when it is not provided.",
+    "category": "User Sign Up",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Switch to sign up mode"
+      },
+      {
+        "type": "action",
+        "description": "Fill a unique email into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid password with at least 6 characters into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign up form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a full name validation error is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Sign up blocks submission when email is missing",
+    "description": "Verifies the sign up form requires an email and shows validation when it is not provided.",
+    "category": "User Sign Up",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Switch to sign up mode"
+      },
+      {
+        "type": "action",
+        "description": "Fill Test User Missing Email into the full name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid password with at least 6 characters into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign up form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an email validation error is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Dashboard loads with KPIs and charts visible",
+    "description": "Verifies the main dashboard renders key KPI cards and charts after login.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify KPI cards are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify dashboard charts are displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Dashboard quick navigation opens Patients module",
+    "description": "Verifies a dashboard quick navigation card opens the patients module view.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click a quick navigation card that opens the patients module"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the patient list view is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Patients module shows list and supports searching",
+    "description": "Verifies the patients module loads and filtering via search updates the list.",
+    "category": "Patients Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the pacientes module"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient\" into the patient search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the patient list is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Create a new patient and verify it appears in the list",
+    "description": "Creates a patient through the form and confirms the new record shows in the list.",
+    "category": "Patients Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the pacientes module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new patient"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient 001\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid phone number into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"auto.patient001@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid CPF into the CPF field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid birth date in the birth date field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Rua Teste 123\" into the address field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Paciente criado por teste\" into the notes field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the patient form"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient 001\" into the patient search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify \"Auto Patient 001\" appears in the patient list"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Patient form shows validation errors when required fields are missing",
+    "description": "Attempts to submit the create patient form without required data and verifies validation feedback is shown.",
+    "category": "Patients Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the pacientes module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new patient"
+      },
+      {
+        "type": "action",
+        "description": "Submit the patient form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify field validation errors are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the patient form"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Open patient details and view odontograma",
+    "description": "Creates a patient, opens its details page, and verifies the dental chart section is available.",
+    "category": "Patients Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the pacientes module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new patient"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient 002\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid phone number into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the patient form"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient 002\" into the patient search field"
+      },
+      {
+        "type": "action",
+        "description": "Open the patient details for \"Auto Patient 002\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify patient details are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the odontograma is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Edit patient information and verify updates persist in the UI",
+    "description": "Creates a patient, edits a field, and verifies the updated value is shown after saving.",
+    "category": "Patients Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the pacientes module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new patient"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient 003\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid phone number into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the patient form"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient 003\" into the patient search field"
+      },
+      {
+        "type": "action",
+        "description": "Open the patient details for \"Auto Patient 003\""
+      },
+      {
+        "type": "action",
+        "description": "Start editing patient information"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Paciente atualizado por teste\" into the notes field"
+      },
+      {
+        "type": "action",
+        "description": "Save the patient changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify \"Paciente atualizado por teste\" is displayed in the patient notes"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Delete a patient and verify it is removed from the list",
+    "description": "Creates a patient, deletes it, and confirms it no longer appears in the patient list.",
+    "category": "Patients Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the pacientes module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new patient"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient 004\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid phone number into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the patient form"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient 004\" into the patient search field"
+      },
+      {
+        "type": "action",
+        "description": "Open the patient details for \"Auto Patient 004\""
+      },
+      {
+        "type": "action",
+        "description": "Initiate deleting the patient"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the deletion"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient 004\" into the patient search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify \"Auto Patient 004\" is not present in the patient list"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Agenda module loads weekly calendar view",
+    "description": "Verifies the appointment schedule module opens and shows the calendar view.",
+    "category": "Appointment Schedule",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the agenda module"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the weekly calendar view is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Create a new appointment and verify it appears on the calendar",
+    "description": "Creates an appointment from an empty slot and confirms it displays on the calendar.",
+    "category": "Appointment Schedule",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the pacientes module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new patient"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Auto Patient Appt 001\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid phone number into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the patient form"
+      },
+      {
+        "type": "action",
+        "description": "Open the agenda module"
+      },
+      {
+        "type": "action",
+        "description": "Click an empty time slot on the calendar"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Auto Patient Appt 001\" as the patient"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid dentist"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid procedure type"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid date for the appointment"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid start time"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid duration"
+      },
+      {
+        "type": "action",
+        "description": "Submit the appointment form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new appointment appears on the calendar"
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Create a new lead and see it appear on the Kanban board",
+    "description": "Verifies a user can create a lead from the CRM module and the new lead card appears in the selected funnel stage.",
+    "category": "CRM Lead Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the crm module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new lead"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Lead Test 001\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"11999990001\" into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"leadtest001@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the lead source field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the interest field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the lead form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a lead card with text \"Lead Test 001\" is displayed on the kanban board"
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Move an existing lead to another stage using drag and drop",
+    "description": "Verifies a user can move a lead card between funnel stages and the card appears in the destination stage.",
+    "category": "CRM Lead Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the crm module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new lead"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Lead Move 001\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"11999990002\" into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"leadmove001@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the lead source field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the interest field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the lead form"
+      },
+      {
+        "type": "action",
+        "description": "Drag the lead card for \"Lead Move 001\" from its current stage to a different funnel stage"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the lead card with text \"Lead Move 001\" is displayed in the destination funnel stage column"
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Add a follow-up history entry to a lead",
+    "description": "Verifies a user can open a lead detail sheet and add a follow-up entry that appears in the timeline.",
+    "category": "CRM Lead Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the crm module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new lead"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Lead Followup 001\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"11999990003\" into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"leadfollowup001@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the lead source field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the interest field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the lead form"
+      },
+      {
+        "type": "action",
+        "description": "Open the lead card for \"Lead Followup 001\" to view lead details"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a follow-up history entry"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Follow-up note 001\" into the follow-up note field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the follow-up entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the lead timeline shows an entry with text \"Follow-up note 001\""
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Validate required fields when creating a lead",
+    "description": "Verifies the CRM lead creation form blocks submission and shows validation errors when required fields are missing.",
+    "category": "CRM Lead Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the crm module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new lead"
+      },
+      {
+        "type": "action",
+        "description": "Submit the lead form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors are visible for required lead fields"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the lead creation form remains open"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Search and filter leads to find a specific lead",
+    "description": "Verifies a user can search/filter leads and only matching lead cards are shown.",
+    "category": "CRM Lead Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the crm module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new lead"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Lead Search 001\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"11999990004\" into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"leadsearch001@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the lead source field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the interest field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the lead form"
+      },
+      {
+        "type": "action",
+        "description": "Search leads for \"Lead Search 001\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a lead card with text \"Lead Search 001\" is displayed in the filtered results"
+      }
+    ]
+  },
+  {
+    "id": "TC026",
+    "title": "Delete a lead and confirm it is removed from the board",
+    "description": "Verifies a user can delete a lead from the detail view and the lead card no longer appears on the Kanban board.",
+    "category": "CRM Lead Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the crm module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new lead"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Lead Delete 001\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"11999990005\" into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"leaddelete001@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the lead source field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the interest field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the lead form"
+      },
+      {
+        "type": "action",
+        "description": "Open the lead card for \"Lead Delete 001\" to view lead details"
+      },
+      {
+        "type": "action",
+        "description": "Delete the lead"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the deletion in the app confirmation UI"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a lead card with text \"Lead Delete 001\" is not displayed on the kanban board"
+      }
+    ]
+  },
+  {
+    "id": "TC027",
+    "title": "Convert a lead to a patient from lead details",
+    "description": "Verifies a user can convert a lead to a patient and the UI reflects conversion completion.",
+    "category": "CRM Lead Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the crm module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new lead"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Lead Convert 001\" into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"11999990006\" into the phone field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"leadconvert001@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the lead source field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid option in the interest field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the lead form"
+      },
+      {
+        "type": "action",
+        "description": "Open the lead card for \"Lead Convert 001\" to view lead details"
+      },
+      {
+        "type": "action",
+        "description": "Convert the lead to a patient"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a success confirmation is visible for the lead conversion"
+      }
+    ]
+  },
+  {
+    "id": "TC028",
+    "title": "Create a revenue entry and see summary totals update",
+    "description": "Verifies a user can add a revenue entry in Financial module and the monthly summary reflects the new revenue.",
+    "category": "Financial Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the financeiro module"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the monthly financial summary to load"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a new revenue entry"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"123.45\" into the amount field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid date for the revenue entry"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid patient in the patient field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the revenue entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the monthly revenue total reflects the newly added amount"
+      }
+    ]
+  },
+  {
+    "id": "TC029",
+    "title": "Create an expense entry and see it appear in the list and summary update",
+    "description": "Verifies a user can add an expense entry and it appears in the expenses list with updated monthly totals.",
+    "category": "Financial Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the financeiro module"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a new expense entry"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"89.90\" into the amount field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid category for the expense"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid date for the expense entry"
+      },
+      {
+        "type": "action",
+        "description": "Submit the expense entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an expense entry with amount \"89.90\" is displayed in the expense list"
+      }
+    ]
+  },
+  {
+    "id": "TC030",
+    "title": "Prevent saving a financial entry with an invalid amount",
+    "description": "Verifies validation prevents saving when the amount is invalid in the Financial module.",
+    "category": "Financial Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the financeiro module"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a new expense entry"
+      },
+      {
+        "type": "action",
+        "description": "Fill an invalid amount into the amount field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid category for the expense"
+      },
+      {
+        "type": "action",
+        "description": "Submit the expense entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an amount validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the entry form remains open"
+      }
+    ]
+  },
+  {
+    "id": "TC031",
+    "title": "Change month/year filter and see financial summary update",
+    "description": "Verifies a user can filter finance data by month/year and the displayed summary changes accordingly.",
+    "category": "Financial Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the financeiro module"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the monthly financial summary to load"
+      },
+      {
+        "type": "action",
+        "description": "Select a different valid month in the month filter"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid year in the year filter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the monthly financial summary reflects the newly selected period"
+      }
+    ]
+  },
+  {
+    "id": "TC032",
+    "title": "View financial charts for the selected period",
+    "description": "Verifies the Financial module displays charts after loading data for the selected period.",
+    "category": "Financial Management",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the financeiro module"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the financial charts section to load"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify financial charts are displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC033",
+    "title": "Add a marketing investment and see it reflected in charts and channel table",
+    "description": "Verifies a user can add a marketing investment and the UI updates to include it in analytics.",
+    "category": "Marketing ROI",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the marketing module"
+      },
+      {
+        "type": "action",
+        "description": "Wait for marketing KPI cards to load"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a marketing investment"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid channel for the investment"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"250.00\" into the investment amount field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid month for the investment"
+      },
+      {
+        "type": "action",
+        "description": "Submit the investment"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the channel performance table includes an entry reflecting the added investment"
+      }
+    ]
+  },
+  {
+    "id": "TC034",
+    "title": "Set monthly marketing goals and see them displayed",
+    "description": "Verifies a user can set monthly goals and the UI displays the saved goals compared with actuals.",
+    "category": "Marketing ROI",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the marketing module"
+      },
+      {
+        "type": "action",
+        "description": "Start editing monthly goals"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"20\" into the leads goal field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"5\" into the conversions goal field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"2\" into the ROI target field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the goals form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the goals section displays the saved values \"20\" and \"5\""
+      }
+    ]
+  },
+  {
+    "id": "TC035",
+    "title": "Validate investment month range when adding a marketing investment",
+    "description": "Verifies validation blocks saving an investment when the selected month range is invalid.",
+    "category": "Marketing ROI",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the marketing module"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a marketing investment"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid channel for the investment"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"100.00\" into the investment amount field"
+      },
+      {
+        "type": "action",
+        "description": "Select an invalid month range in the month selector"
+      },
+      {
+        "type": "action",
+        "description": "Submit the investment"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a month range validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the investment form remains open"
+      }
+    ]
+  },
+  {
+    "id": "TC036",
+    "title": "Filter marketing analytics by a preset period",
+    "description": "Verifies a user can change the marketing analytics period (e.g., 3/6/12 months) and the displayed analytics update.",
+    "category": "Marketing ROI",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the marketing module"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the KPI cards to load"
+      },
+      {
+        "type": "action",
+        "description": "Select a different preset period in the period filter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the investment vs revenue charts reflect the newly selected period"
+      }
+    ]
+  },
+  {
+    "id": "TC037",
+    "title": "View marketing KPI cards on load",
+    "description": "Verifies the Marketing module renders the primary KPI content (investment, revenue, ROI, CAC).",
+    "category": "Marketing ROI",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Open the marketing module"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify marketing KPI cards are displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC038",
+    "title": "WhatsApp Chat: Send a text message in an existing conversation",
+    "description": "Verifies the user can open the chat module, select a conversation, send a text message, and see it appear in the thread.",
+    "category": "WhatsApp Chat",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the chat module"
+      },
+      {
+        "type": "action",
+        "description": "Select a conversation to view messages"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a new message with text \"Test message TC001\""
+      },
+      {
+        "type": "action",
+        "description": "Send the message"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the conversation shows the message text \"Test message TC001\""
+      }
+    ]
+  },
+  {
+    "id": "TC039",
+    "title": "WhatsApp Chat: Search conversations by name or phone",
+    "description": "Verifies searching filters the conversation list based on a query typed by the user.",
+    "category": "WhatsApp Chat",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the chat module"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"a\" into the conversation search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the conversation list is filtered to match the search query"
+      }
+    ]
+  },
+  {
+    "id": "TC040",
+    "title": "WhatsApp Chat: Record and send an audio message",
+    "description": "Verifies the user can record and send an audio message and then see it appear playable in the conversation.",
+    "category": "WhatsApp Chat",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the chat module"
+      },
+      {
+        "type": "action",
+        "description": "Select a conversation to view messages"
+      },
+      {
+        "type": "action",
+        "description": "Start recording an audio message"
+      },
+      {
+        "type": "action",
+        "description": "Stop recording the audio message"
+      },
+      {
+        "type": "action",
+        "description": "Send the recorded audio message"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an audio message appears in the conversation and is playable"
+      }
+    ]
+  },
+  {
+    "id": "TC041",
+    "title": "WhatsApp Chat: Show error state when integration is not configured and user attempts to send",
+    "description": "Verifies the UI shows a send failure or integration error indicator when the user attempts to send a message while integration is not configured.",
+    "category": "WhatsApp Chat",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the chat module"
+      },
+      {
+        "type": "action",
+        "description": "Select a conversation to view messages"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a new message with text \"Test message integration missing\""
+      },
+      {
+        "type": "action",
+        "description": "Send the message"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a send failure indicator or integration configuration error is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC042",
+    "title": "WhatsApp Chat: Filter conversations by funnel stage and date",
+    "description": "Verifies applying funnel stage and date filters updates the conversation list accordingly.",
+    "category": "WhatsApp Chat",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the chat module"
+      },
+      {
+        "type": "action",
+        "description": "Open conversation filters"
+      },
+      {
+        "type": "action",
+        "description": "Select a funnel stage filter value"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid date range filter value"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the conversation list reflects the selected filters"
+      }
+    ]
+  },
+  {
+    "id": "TC043",
+    "title": "WhatsApp Chat: Bulk delete conversations from the list",
+    "description": "Verifies the user can select multiple conversations and delete them, removing them from the conversation list.",
+    "category": "WhatsApp Chat",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the chat module"
+      },
+      {
+        "type": "action",
+        "description": "Select two conversations in the list using multi-select"
+      },
+      {
+        "type": "action",
+        "description": "Trigger bulk delete for the selected conversations"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the bulk delete action"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected conversations are no longer shown in the conversation list"
+      }
+    ]
+  },
+  {
+    "id": "TC044",
+    "title": "WhatsApp Chat: View media messages in a conversation",
+    "description": "Verifies that media messages are rendered when the user opens a conversation that contains media.",
+    "category": "WhatsApp Chat",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the chat module"
+      },
+      {
+        "type": "action",
+        "description": "Select a conversation to view messages"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify media messages (such as images, audio, video, or documents) are displayed if present in the thread"
+      }
+    ]
+  },
+  {
+    "id": "TC045",
+    "title": "Settings: Edit clinic information and save",
+    "description": "Verifies a user can update clinic information in settings and see the updated values after saving.",
+    "category": "Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the configuracoes module"
+      },
+      {
+        "type": "action",
+        "description": "Open the Clinica tab"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Clinic TC008\" into the clinic name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Address TC008\" into the clinic address field"
+      },
+      {
+        "type": "action",
+        "description": "Save changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the clinic name field shows \"Clinic TC008\""
+      }
+    ]
+  },
+  {
+    "id": "TC046",
+    "title": "Settings: Add a new user with role and sector",
+    "description": "Verifies a new user can be added from the users tab and appears in the users list.",
+    "category": "Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the configuracoes module"
+      },
+      {
+        "type": "action",
+        "description": "Open the Usuarios tab"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a new user"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"tc009.user@example.com\" into the new user email field"
+      },
+      {
+        "type": "action",
+        "description": "Select a role for the new user"
+      },
+      {
+        "type": "action",
+        "description": "Select a sector for the new user"
+      },
+      {
+        "type": "action",
+        "description": "Submit the new user form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the users list contains \"tc009.user@example.com\""
+      }
+    ]
+  },
+  {
+    "id": "TC047",
+    "title": "Settings: Configure WhatsApp integration for a sector and initiate instance creation",
+    "description": "Verifies the WhatsApp integration setup flow can be initiated and shows a QR code or instance status on screen.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the configuracoes module"
+      },
+      {
+        "type": "action",
+        "description": "Open the Integracoes section"
+      },
+      {
+        "type": "action",
+        "description": "Choose a sector to configure WhatsApp integration"
+      },
+      {
+        "type": "action",
+        "description": "Initiate WhatsApp instance creation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a QR code or instance status is displayed for the selected sector"
+      }
+    ]
+  },
+  {
+    "id": "TC048",
+    "title": "Settings: Non-gestor user is restricted from admin-only tabs",
+    "description": "Verifies restricted admin settings are not accessible for a non-gestor user.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with \"non.gestor@example.com\""
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with \"invalid-or-non-gestor-password\""
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the configuracoes module"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify restricted admin tabs are hidden or an insufficient permissions prompt is shown"
+      }
+    ]
+  },
+  {
+    "id": "TC049",
+    "title": "Settings: Deactivate a user from the users list",
+    "description": "Verifies a user can be deactivated and is shown as inactive in the UI.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the configuracoes module"
+      },
+      {
+        "type": "action",
+        "description": "Open the Usuarios tab"
+      },
+      {
+        "type": "action",
+        "description": "Select an active user from the users list"
+      },
+      {
+        "type": "action",
+        "description": "Deactivate the selected user"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the deactivation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected user is shown as inactive or deactivated in the users list"
+      }
+    ]
+  },
+  {
+    "id": "TC050",
+    "title": "Tasks: Create a new task and see it in Pendente",
+    "description": "Verifies the user can create a task with required fields and it appears in the Pendente column.",
+    "category": "Tasks",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the tarefas module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new task"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Task TC013\" into the task title field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Description TC013\" into the task description field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid due date"
+      },
+      {
+        "type": "action",
+        "description": "Select an assignee"
+      },
+      {
+        "type": "action",
+        "description": "Submit the new task"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a task titled \"Task TC013\" appears in the Pendente column"
+      }
+    ]
+  },
+  {
+    "id": "TC051",
+    "title": "Tasks: Move task from Pendente to Em Andamento and complete it",
+    "description": "Verifies the user can change task status through the workflow until it is shown as completed.",
+    "category": "Tasks",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the tarefas module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new task"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Task TC014\" into the task title field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid due date"
+      },
+      {
+        "type": "action",
+        "description": "Select an assignee"
+      },
+      {
+        "type": "action",
+        "description": "Submit the new task"
+      },
+      {
+        "type": "action",
+        "description": "Open the task titled \"Task TC014\""
+      },
+      {
+        "type": "action",
+        "description": "Change the task status to Em Andamento"
+      },
+      {
+        "type": "action",
+        "description": "Mark the task as complete"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the task titled \"Task TC014\" appears in the Concluída column"
+      }
+    ]
+  },
+  {
+    "id": "TC052",
+    "title": "Tasks: Validation prevents creating a task without a title",
+    "description": "Verifies the UI shows a validation error and does not create the task when title is missing.",
+    "category": "Tasks",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the tarefas module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new task"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Description TC015\" into the task description field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the new task"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a title validation error is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC053",
+    "title": "Tasks: Edit task details",
+    "description": "Verifies the user can edit an existing task and see the updated values reflected in the task view.",
+    "category": "Tasks",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the tarefas module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new task"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Task TC016\" into the task title field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid due date"
+      },
+      {
+        "type": "action",
+        "description": "Select an assignee"
+      },
+      {
+        "type": "action",
+        "description": "Submit the new task"
+      },
+      {
+        "type": "action",
+        "description": "Open the task titled \"Task TC016\""
+      },
+      {
+        "type": "action",
+        "description": "Edit the task title to \"Task TC016 Updated\""
+      },
+      {
+        "type": "action",
+        "description": "Save task changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the task title shows \"Task TC016 Updated\""
+      }
+    ]
+  },
+  {
+    "id": "TC054",
+    "title": "Tasks: Delete a task",
+    "description": "Verifies the user can delete a task and it is removed from the board.",
+    "category": "Tasks",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the tarefas module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new task"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Task TC017\" into the task title field"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid due date"
+      },
+      {
+        "type": "action",
+        "description": "Select an assignee"
+      },
+      {
+        "type": "action",
+        "description": "Submit the new task"
+      },
+      {
+        "type": "action",
+        "description": "Open the task titled \"Task TC017\""
+      },
+      {
+        "type": "action",
+        "description": "Delete the task"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the deletion"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no task titled \"Task TC017\" is shown on the board"
+      }
+    ]
+  }
+]

@@ -1,0 +1,1 @@
+ALTER TABLE public.planos_tratamento ADD COLUMN forma_pagamento text DEFAULT NULL;
