@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import type { Lead } from '@/types';
+import type { Lead, FunilEtapa } from '@/types';
 import KanbanBoard from './KanbanBoard';
 import LeadFormDialog from './LeadFormDialog';
 import LeadDetailSheet from './LeadDetailSheet';
@@ -80,8 +80,8 @@ export default function CRMPage({ onNavigate }: { onNavigate?: (page: string) =>
     setFormOpen(true);
   };
 
-  const handleMoveEtapa = async (leadId: string, novaEtapa: string) => {
-    await updateLead(leadId, { etapa_funil: novaEtapa });
+  const handleMoveEtapa = async (leadId: string, novaEtapa: FunilEtapa) => {
+    await updateLead(leadId, { etapa_funil: novaEtapa.nome, etapa_id: novaEtapa.id });
   };
 
   const handleConvert = async (lead: Lead) => {
@@ -229,7 +229,7 @@ export default function CRMPage({ onNavigate }: { onNavigate?: (page: string) =>
       {etapas.length > 0 ? (
         <KanbanBoard
           leads={filteredLeads}
-          etapas={etapas.map(e => e.nome)}
+          etapas={etapas}
           onLeadClick={setDetailLead}
           onMoveEtapa={handleMoveEtapa}
         />
@@ -245,7 +245,7 @@ export default function CRMPage({ onNavigate }: { onNavigate?: (page: string) =>
         onClose={() => { setFormOpen(false); setEditingLead(null); }}
         onSave={handleSave}
         lead={editingLead}
-        etapas={etapas.map(e => e.nome)}
+        etapas={etapas}
       />
 
       {/* Detail Sheet */}

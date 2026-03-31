@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import type { Lead } from '@/types';
+import type { Lead, FunilEtapa } from '@/types';
 import { maskPhone } from '@/utils/masks';
 
 const ORIGENS = ['Instagram', 'Google Ads', 'Indicação', 'Site', 'Facebook', 'Outro'];
-const ETAPAS = ['Novo Lead', 'Em Contato', 'Avaliação marcada', 'Orçamento aprovado', 'Orçamento perdido'];
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onSave: (data: Record<string, unknown>) => Promise<void>;
   lead: Lead | null;
-  etapas: string[];
+  etapas: FunilEtapa[];
 }
 
 export default function LeadFormDialog({ open, onClose, onSave, lead, etapas = [] }: Props) {
@@ -22,7 +21,8 @@ export default function LeadFormDialog({ open, onClose, onSave, lead, etapas = [
     email: '',
     origem: '',
     interesse: '',
-    etapa_funil: etapas.length > 0 ? etapas[0] : 'Novo Lead',
+    etapa_funil: etapas.length > 0 ? etapas[0].nome : 'Novo Lead',
+    etapa_id: etapas.length > 0 ? etapas[0].id : '',
     proxima_acao_data: '',
     proxima_acao_tipo: '',
   });
@@ -36,13 +36,16 @@ export default function LeadFormDialog({ open, onClose, onSave, lead, etapas = [
         origem: lead.origem || '',
         interesse: lead.interesse || '',
         etapa_funil: lead.etapa_funil,
+        etapa_id: lead.etapa_id || (etapas.length > 0 ? etapas[0].id : ''),
         proxima_acao_data: lead.proxima_acao_data || '',
         proxima_acao_tipo: lead.proxima_acao_tipo || '',
       });
     } else {
       setForm({
         nome: '', telefone: '', email: '', origem: '', interesse: '',
-        etapa_funil: etapas.length > 0 ? etapas[0] : 'Novo Lead', proxima_acao_data: '', proxima_acao_tipo: '',
+        etapa_funil: etapas.length > 0 ? etapas[0].nome : 'Novo Lead',
+        etapa_id: etapas.length > 0 ? etapas[0].id : '',
+        proxima_acao_data: '', proxima_acao_tipo: '',
       });
     }
   }, [lead, open, etapas]);
@@ -57,6 +60,7 @@ export default function LeadFormDialog({ open, onClose, onSave, lead, etapas = [
       origem: form.origem || null,
       interesse: form.interesse || null,
       etapa_funil: form.etapa_funil,
+      etapa_id: form.etapa_id || null,
       proxima_acao_data: form.proxima_acao_data || null,
       proxima_acao_tipo: form.proxima_acao_tipo || null,
     });
@@ -129,11 +133,22 @@ export default function LeadFormDialog({ open, onClose, onSave, lead, etapas = [
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Etapa</label>
               <select
-                value={form.etapa_funil}
-                onChange={e => setForm(p => ({ ...p, etapa_funil: e.target.value }))}
+                value={form.etapa_id || form.etapa_funil}
+                onChange={e => {
+                   const val = e.target.value;
+                   const found = etapas.find(et => et.id === val);
+                   if (found) {
+                     setForm(p => ({ ...p, etapa_id: found.id, etapa_funil: found.nome }));
+                   } else {
+                     setForm(p => ({ ...p, etapa_funil: val }));
+                   }
+                }}
                 className="dental-input"
               >
-                {etapas.map(et => <option key={et} value={et}>{et}</option>)}
+                {etapas.map(et => <option key={et.id} value={et.id}>{et.nome}</option>)}
+                {!form.etapa_id && form.etapa_funil && !etapas.find(et => et.nome === form.etapa_funil) && (
+                   <option value={form.etapa_funil}>{form.etapa_funil}</option>
+                )}
               </select>
             </div>
           </div>

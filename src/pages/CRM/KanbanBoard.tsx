@@ -4,7 +4,7 @@ import { formatWhatsAppLink } from '@/utils/masks';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { Lead } from '@/types';
+import type { Lead, FunilEtapa } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ETAPA_CONFIG: Record<string, { color: string; bg: string; border: string; dropHighlight: string }> = {
@@ -26,9 +26,9 @@ const ORIGEM_EMOJI: Record<string, string> = {
 
 interface Props {
   leads: Lead[];
-  etapas: string[];
+  etapas: FunilEtapa[];
   onLeadClick: (lead: Lead) => void;
-  onMoveEtapa: (leadId: string, novaEtapa: string) => void;
+  onMoveEtapa: (leadId: string, novaEtapa: FunilEtapa) => void;
 }
 
 export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }: Props) {
@@ -39,9 +39,12 @@ export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }:
 
   const columns = useMemo(() => {
     return etapas.map(etapa => ({
-      etapa,
-      leads: leads.filter(l => l.etapa_funil === etapa),
-      config: ETAPA_CONFIG[etapa] || ETAPA_CONFIG['Novo Lead'],
+      etapa: etapa.nome,
+      etapaId: etapa.id,
+      etapaObj: etapa,
+      // Retro-compatibility check: Use ID if present, else fallback to stage name
+      leads: leads.filter(l => l.etapa_id === etapa.id || (!l.etapa_id && l.etapa_funil === etapa.nome)),
+      config: ETAPA_CONFIG[etapa.nome] || ETAPA_CONFIG['Novo Lead'],
     }));
   }, [leads, etapas]);
 
@@ -49,7 +52,6 @@ export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }:
     setDraggingId(lead.id);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', lead.id);
-    // Make the drag image slightly transparent
     if (e.currentTarget) {
       e.currentTarget.style.opacity = '0.5';
     }
@@ -63,32 +65,31 @@ export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }:
     }
   }, []);
 
-  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>, etapa: string) => {
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>, etapaId: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    setDropTarget(etapa);
+    setDropTarget(etapaId);
   }, []);
 
-  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>, etapa: string) => {
-    // Only clear if we're leaving the column entirely
+  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>, etapaId: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const { clientX, clientY } = e;
     if (
       clientX < rect.left || clientX > rect.right ||
       clientY < rect.top || clientY > rect.bottom
     ) {
-      setDropTarget(prev => prev === etapa ? null : prev);
+      setDropTarget(prev => prev === etapaId ? null : prev);
     }
   }, []);
 
-  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>, etapa: string) => {
+  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>, etapaObj: FunilEtapa) => {
     e.preventDefault();
     const leadId = e.dataTransfer.getData('text/plain');
     if (leadId) {
-      // Only move if dropping in a different column
       const lead = leads.find(l => l.id === leadId);
-      if (lead && lead.etapa_funil !== etapa) {
-        onMoveEtapa(leadId, etapa);
+      // Change column if the ID does not match, OR if ID is missing but text doesn't match
+      if (lead && (lead.etapa_id !== etapaObj.id && lead.etapa_funil !== etapaObj.nome)) {
+        onMoveEtapa(leadId, etapaObj);
       }
     }
     setDropTarget(null);
@@ -97,18 +98,18 @@ export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }:
 
   return (
     <div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2">
-      {columns.map(({ etapa, leads: colLeads, config }, colIdx) => (
+      {columns.map(({ etapa, etapaId, etapaObj, leads: colLeads, config }, colIdx) => (
         <div
-          key={etapa}
-          onDragOver={e => handleDragOver(e, etapa)}
-          onDragLeave={e => handleDragLeave(e, etapa)}
-          onDrop={e => handleDrop(e, etapa)}
+          key={etapaId}
+          onDragOver={e => handleDragOver(e, etapaId)}
+          onDragLeave={e => handleDragLeave(e, etapaId)}
+          onDrop={e => handleDrop(e, etapaObj)}
           className={cn(
             'flex-shrink-0 w-[240px] rounded-xl border flex flex-col transition-all duration-200',
             config.border,
             `${config.bg}/30`,
-            dropTarget === etapa && draggingId && 'ring-2 ring-offset-1 scale-[1.01]',
-            dropTarget === etapa && draggingId && config.dropHighlight,
+            dropTarget === etapaId && draggingId && 'ring-2 ring-offset-1 scale-[1.01]',
+            dropTarget === etapaId && draggingId && config.dropHighlight,
           )}
         >
           {/* Column Header */}
@@ -126,16 +127,16 @@ export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }:
           {/* Cards */}
           <div className={cn(
             'p-2 space-y-2 flex-1 min-h-[200px] max-h-[500px] overflow-y-auto transition-colors duration-200',
-            dropTarget === etapa && draggingId && `${config.bg}/50`,
+            dropTarget === etapaId && draggingId && `${config.bg}/50`,
           )}>
             {colLeads.length === 0 && (
               <p className={cn(
                 'text-xs text-center py-8 transition-opacity',
-                dropTarget === etapa && draggingId
+                dropTarget === etapaId && draggingId
                   ? `${config.color} opacity-80 font-medium`
                   : 'text-muted-foreground opacity-60',
               )}>
-                {dropTarget === etapa && draggingId ? 'Solte aqui' : 'Nenhum lead'}
+                {dropTarget === etapaId && draggingId ? 'Solte aqui' : 'Nenhum lead'}
               </p>
             )}
             {colLeads.map(lead => (
@@ -212,7 +213,7 @@ export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }:
                     <button
                       onClick={e => { e.stopPropagation(); onMoveEtapa(lead.id, etapas[colIdx - 1]); }}
                       className="p-1 rounded hover:bg-muted transition-colors"
-                      title={`Mover para ${etapas[colIdx - 1]}`}
+                      title={`Mover para ${etapas[colIdx - 1].nome}`}
                     >
                       <ChevronLeft size={14} className="text-muted-foreground" />
                     </button>
@@ -222,7 +223,7 @@ export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }:
                     <button
                       onClick={e => { e.stopPropagation(); onMoveEtapa(lead.id, etapas[colIdx + 1]); }}
                       className="p-1 rounded hover:bg-muted transition-colors"
-                      title={`Mover para ${etapas[colIdx + 1]}`}
+                      title={`Mover para ${etapas[colIdx + 1].nome}`}
                     >
                       <ChevronRight size={14} className="text-muted-foreground" />
                     </button>

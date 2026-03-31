@@ -62,20 +62,47 @@ Deno.serve(async (req) => {
 
     // Optional fields (sanitized)
     const email = sanitize(body.email);
-    const origem = sanitize(body.origem || body.origin);
     const interesse = sanitize(body.interesse || body.interest);
+
+    // Support raw origem and utms
+    const origemInput = sanitize(body.origem || body.origin);
     
     // Funnel and Stage extraction
     const funil_id = sanitize(body.funil_id || body.pipeline_id || url.searchParams.get("funil_id") || url.searchParams.get("pipeline_id")) || null;
     const etapa_id = sanitize(body.etapa_id || body.stage_id || url.searchParams.get("etapa_id") || url.searchParams.get("stage_id")) || null;
 
-    // Derive origem from utm_source if not provided
-    const finalOrigem = origem || deriveOrigem(utm_source);
+    if (!funil_id || !etapa_id) {
+      return new Response(
+        JSON.stringify({
+          status: "error",
+          message: "Bad Request: Os parâmetros 'funil_id' e 'etapa_id' agora são OBRIGATÓRIOS para a nova arquitetura do CRM."
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate and coerce origem against DB Enum constraint
+    const finalOrigem = normalizeOrigem(origemInput, utm_source);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Resolve dynamic stage name and default funnel stage
+    let resolvedEtapaFunil = "Novo Lead";
+    let resolvedEtapaId = etapa_id;
+
+    if (etapa_id) {
+       const { data: eData } = await supabase.from("funil_etapas").select("nome").eq("id", etapa_id).maybeSingle();
+       if (eData) resolvedEtapaFunil = eData.nome;
+    } else if (funil_id) {
+       const { data: firstEtapa } = await supabase.from("funil_etapas").select("id, nome").eq("funil_id", funil_id).order("ordem", { ascending: true }).limit(1).maybeSingle();
+       if (firstEtapa) {
+           resolvedEtapaId = firstEtapa.id;
+           resolvedEtapaFunil = firstEtapa.nome;
+       }
+    }
 
     // Check if lead already exists by phone
     const digits = telefone.replace(/\D/g, "");
@@ -101,7 +128,13 @@ Deno.serve(async (req) => {
       if (utm_term) updateData.utm_term = utm_term;
       if (utm_content) updateData.utm_content = utm_content;
       if (funil_id) updateData.funil_id = funil_id;
-      if (etapa_id) updateData.etapa_id = etapa_id;
+      
+      if (resolvedEtapaId || funil_id) {
+         if (resolvedEtapaId) updateData.etapa_id = resolvedEtapaId;
+         if (resolvedEtapaFunil !== "Novo Lead" || !funil_id) {
+             updateData.etapa_funil = resolvedEtapaFunil;
+         }
+      }
 
       if (Object.keys(updateData).length > 0) {
         await supabase.from("leads").update(updateData).eq("id", duplicate.id);
@@ -161,9 +194,9 @@ Deno.serve(async (req) => {
         email,
         origem: finalOrigem,
         interesse,
-        etapa_funil: "Novo Lead", // Backwards compatibility for old static funnel component
+        etapa_funil: resolvedEtapaFunil,
         funil_id,
-        etapa_id,
+        etapa_id: resolvedEtapaId,
         utm_source,
         utm_medium,
         utm_campaign,
@@ -316,12 +349,24 @@ Deno.serve(async (req) => {
   }
 });
 
-function deriveOrigem(utmSource: string | null): string {
-  if (!utmSource) return "Site";
-  const s = utmSource.toLowerCase();
-  if (s.includes("google")) return "Google Ads";
-  if (s.includes("facebook") || s.includes("fb")) return "Facebook";
-  if (s.includes("instagram") || s.includes("ig")) return "Instagram";
-  if (s.includes("whatsapp")) return "WhatsApp";
-  return "Site";
+function normalizeOrigem(origem: string | null, utmSource: string | null): string {
+  const val = (origem || "").toLowerCase();
+  
+  if (val.includes("instagram") || val.includes("ig")) return "Instagram";
+  if (val.includes("google") || val.includes("adwords")) return "Google Ads";
+  if (val.includes("facebook") || val.includes("fb")) return "Facebook";
+  if (val.includes("whatsapp") || val.includes("wpp")) return "WhatsApp";
+  if (val.includes("indica")) return "Indicação";
+  if (val.includes("site") || val.includes("web") || val.includes("landing")) return "Site";
+
+  if (!origem && utmSource) {
+    const s = utmSource.toLowerCase();
+    if (s.includes("google")) return "Google Ads";
+    if (s.includes("facebook") || s.includes("fb")) return "Facebook";
+    if (s.includes("instagram") || s.includes("ig")) return "Instagram";
+    if (s.includes("whatsapp")) return "WhatsApp";
+    return "Site";
+  }
+
+  return "Outro";
 }
