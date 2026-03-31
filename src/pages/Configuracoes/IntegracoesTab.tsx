@@ -9,7 +9,7 @@ import { Save, Loader2, Calendar, Target, Webhook, Facebook, ExternalLink } from
 import { toast } from 'sonner';
 import WhatsAppManager from './WhatsAppManager';
 import { supabase } from '@/integrations/supabase/client';
-
+import VariaveisClinica from './VariaveisClinica';
 export default function IntegracoesTab() {
   const { integracoes, loading, saveIntegracao } = useIntegracoes();
   const [saving, setSaving] = useState<string | null>(null);
@@ -22,8 +22,8 @@ export default function IntegracoesTab() {
       const meta = integracoes.find(i => i.tipo === 'meta_ads');
       if (meta && meta.credentials) {
         setMetaForm({
-          pixelId: meta.credentials.pixelId || '',
-          conversionsApiToken: meta.credentials.conversionsApiToken || '',
+          pixelId: (meta.credentials.pixelId as string) || '',
+          conversionsApiToken: (meta.credentials.conversionsApiToken as string) || '',
           enabled: meta.ativo,
         });
       }
@@ -31,8 +31,8 @@ export default function IntegracoesTab() {
       const google = integracoes.find(i => i.tipo === 'google_ads');
       if (google && google.credentials) {
         setGoogleForm({
-          ga4Id: google.credentials.ga4Id || '',
-          gtmId: google.credentials.gtmId || '',
+          ga4Id: (google.credentials.ga4Id as string) || '',
+          gtmId: (google.credentials.gtmId as string) || '',
           enabled: google.ativo,
         });
       }
@@ -60,6 +60,8 @@ export default function IntegracoesTab() {
       {/* WhatsApp / Evolution API Management */}
       <WhatsAppManager />
 
+      {/* Variáveis da Clínica para Integrações */}
+      <VariaveisClinica />
 
       {/* Meta Ads Tracking */}
       <Card>
@@ -194,7 +196,7 @@ export default function IntegracoesTab() {
                 } else {
                   throw new Error("Erro ao obter URL do Google");
                 }
-              } catch (e: Record<string, unknown>) {
+              } catch (e: any) {
                 toast.error(e.message || 'Erro ao iniciar autenticação');
               }
             }}

@@ -64,6 +64,8 @@ POST /functions/v1/webhook-lead?clinica_id={UUID}
 | `nome` | string | ✅ | `name`, `full_name` |
 | `telefone` | string | ✅ | `phone`, `whatsapp` |
 | `clinica_id` | UUID | ✅ | via query ou body |
+| `funil_id` | UUID | ❌ | `pipeline_id`, via query ou body |
+| `etapa_id` | UUID | ❌ | `stage_id`, via query ou body |
 | `email` | string | ❌ | — |
 | `origem` | string | ❌ | `origin` |
 | `interesse` | string | ❌ | `interest` |

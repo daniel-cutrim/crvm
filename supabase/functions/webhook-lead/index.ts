@@ -64,6 +64,10 @@ Deno.serve(async (req) => {
     const email = sanitize(body.email);
     const origem = sanitize(body.origem || body.origin);
     const interesse = sanitize(body.interesse || body.interest);
+    
+    // Funnel and Stage extraction
+    const funil_id = sanitize(body.funil_id || body.pipeline_id || url.searchParams.get("funil_id") || url.searchParams.get("pipeline_id")) || null;
+    const etapa_id = sanitize(body.etapa_id || body.stage_id || url.searchParams.get("etapa_id") || url.searchParams.get("stage_id")) || null;
 
     // Derive origem from utm_source if not provided
     const finalOrigem = origem || deriveOrigem(utm_source);
@@ -89,13 +93,15 @@ Deno.serve(async (req) => {
     });
 
     if (duplicate) {
-      // Update UTMs on existing lead if they were empty
+      // Update UTMs and funnel if empty or newly provided on existing lead
       const updateData: Record<string, string> = {};
       if (utm_source) updateData.utm_source = utm_source;
       if (utm_medium) updateData.utm_medium = utm_medium;
       if (utm_campaign) updateData.utm_campaign = utm_campaign;
       if (utm_term) updateData.utm_term = utm_term;
       if (utm_content) updateData.utm_content = utm_content;
+      if (funil_id) updateData.funil_id = funil_id;
+      if (etapa_id) updateData.etapa_id = etapa_id;
 
       if (Object.keys(updateData).length > 0) {
         await supabase.from("leads").update(updateData).eq("id", duplicate.id);
@@ -155,7 +161,9 @@ Deno.serve(async (req) => {
         email,
         origem: finalOrigem,
         interesse,
-        etapa_funil: "Novo Lead",
+        etapa_funil: "Novo Lead", // Backwards compatibility for old static funnel component
+        funil_id,
+        etapa_id,
         utm_source,
         utm_medium,
         utm_campaign,
