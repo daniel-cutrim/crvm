@@ -97,13 +97,14 @@ export default function LeadFormDialog({ open, onClose, onSave, lead, etapas = [
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Telefone</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Telefone *</label>
               <input
                 type="tel"
                 value={form.telefone}
                 onChange={e => setForm(p => ({ ...p, telefone: maskPhone(e.target.value) }))}
                 className="dental-input"
                 placeholder="(21) 99999-0000"
+                required
               />
             </div>
             <div>
@@ -131,24 +132,21 @@ export default function LeadFormDialog({ open, onClose, onSave, lead, etapas = [
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Etapa</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Etapa *</label>
               <select
-                value={form.etapa_id || form.etapa_funil}
+                value={form.etapa_id || ''}
                 onChange={e => {
                    const val = e.target.value;
                    const found = etapas.find(et => et.id === val);
                    if (found) {
                      setForm(p => ({ ...p, etapa_id: found.id, etapa_funil: found.nome }));
-                   } else {
-                     setForm(p => ({ ...p, etapa_funil: val }));
                    }
                 }}
                 className="dental-input"
+                required
               >
+                <option value="" disabled>Selecionar</option>
                 {etapas.map(et => <option key={et.id} value={et.id}>{et.nome}</option>)}
-                {!form.etapa_id && form.etapa_funil && !etapas.find(et => et.nome === form.etapa_funil) && (
-                   <option value={form.etapa_funil}>{form.etapa_funil}</option>
-                )}
               </select>
             </div>
           </div>

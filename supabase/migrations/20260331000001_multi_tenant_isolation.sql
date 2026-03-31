@@ -1,3 +1,13 @@
+-- 0. FIX INFINITE RECURSION IN get_user_clinica_id
+CREATE OR REPLACE FUNCTION public.get_user_clinica_id()
+ RETURNS uuid
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+AS $function$
+  SELECT clinica_id FROM public.usuarios WHERE auth_user_id = auth.uid() LIMIT 1;
+$function$;
+
+-- 1. DROP ALL EXISTING POLICIES ON PUBLIC SCHEMA TO RESET SECURITY
 DO $$ 
 DECLARE
     r record;
