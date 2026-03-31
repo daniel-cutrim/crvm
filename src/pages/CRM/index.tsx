@@ -223,7 +223,7 @@ export default function CRMPage({ onNavigate }: { onNavigate?: (page: string) =>
       </div>
 
       {/* Metrics Panel */}
-      <CRMMetricsPanel leads={filteredLeads} />
+      <CRMMetricsPanel leads={filteredLeads} funilEtapas={etapas} />
 
       {/* Kanban Board */}
       {etapas.length > 0 ? (

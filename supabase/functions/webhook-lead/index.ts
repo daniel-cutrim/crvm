@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
           phone: dupPhone,
           nome: nome,
           lead_id: duplicate.id,
-          ultima_mensagem: `Lead retornou via ${deriveOrigem(utm_source)}`,
+          ultima_mensagem: `Lead retornou via ${finalOrigem}`,
           ultima_mensagem_at: new Date().toISOString(),
           nao_lidas: 1,
         });

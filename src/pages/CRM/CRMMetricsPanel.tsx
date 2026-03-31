@@ -1,36 +1,59 @@
 import { useMemo, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, FunnelChart, Funnel, LabelList } from 'recharts';
-import { TrendingUp, Filter, ChevronDown, ChevronUp } from 'lucide-react';
-import type { Lead } from '@/types';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import type { Lead, FunilEtapa } from '@/types';
 
 interface CRMMetricsPanelProps {
   leads: Lead[];
+  funilEtapas: FunilEtapa[];
 }
 
-const ETAPAS_ORDER = ['Novo Lead', 'Em Contato', 'Avaliação marcada', 'Orçamento aprovado'];
-const ETAPA_COLORS = ['hsl(199, 89%, 38%)', 'hsl(38, 92%, 50%)', 'hsl(162, 63%, 41%)', 'hsl(142, 71%, 45%)'];
-const ORIGEM_COLORS = ['hsl(199, 89%, 38%)', 'hsl(38, 92%, 50%)', 'hsl(162, 63%, 41%)', 'hsl(0, 72%, 51%)', 'hsl(270, 60%, 50%)', 'hsl(210, 15%, 55%)'];
+const DEFAULT_COLORS = [
+  'hsl(199, 89%, 38%)', 'hsl(38, 92%, 50%)', 'hsl(162, 63%, 41%)',
+  'hsl(142, 71%, 45%)', 'hsl(270, 60%, 50%)', 'hsl(340, 75%, 50%)',
+];
+const ORIGEM_COLORS = [
+  'hsl(199, 89%, 38%)', 'hsl(38, 92%, 50%)', 'hsl(162, 63%, 41%)',
+  'hsl(0, 72%, 51%)', 'hsl(270, 60%, 50%)', 'hsl(210, 15%, 55%)',
+];
 
-export default function CRMMetricsPanel({ leads }: CRMMetricsPanelProps) {
+export default function CRMMetricsPanel({ leads, funilEtapas }: CRMMetricsPanelProps) {
   const [expanded, setExpanded] = useState(true);
 
   const funnelData = useMemo(() => {
-    const activeLeads = leads.filter(l => l.etapa_funil !== 'Orçamento perdido');
-    return ETAPAS_ORDER.map((etapa, i) => {
-      const count = etapa === 'Novo Lead'
-        ? leads.filter(l => l.etapa_funil !== 'Orçamento perdido').length
-        : etapa === 'Em Contato'
-          ? leads.filter(l => ['Em Contato', 'Avaliação marcada', 'Orçamento aprovado'].includes(l.etapa_funil)).length
-          : etapa === 'Avaliação marcada'
-            ? leads.filter(l => ['Avaliação marcada', 'Orçamento aprovado'].includes(l.etapa_funil)).length
-            : leads.filter(l => l.etapa_funil === 'Orçamento aprovado').length;
+    if (!funilEtapas || funilEtapas.length === 0) return [];
+
+    // Sort etapas by ordem
+    const sortedEtapas = [...funilEtapas].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+    return sortedEtapas.map((etapa, i) => {
+      // Count leads that are in this specific stage by etapa_id, with fallback to etapa_funil name
+      const count = leads.filter(l => {
+        if (l.etapa_id) return l.etapa_id === etapa.id;
+        return l.etapa_funil === etapa.nome;
+      }).length;
+
       return {
-        name: etapa,
+        name: etapa.nome,
         value: count,
-        fill: ETAPA_COLORS[i],
+        fill: etapa.cor || DEFAULT_COLORS[i % DEFAULT_COLORS.length],
       };
     });
-  }, [leads]);
+  }, [leads, funilEtapas]);
+
+  // Cumulative funnel data (each stage includes leads from later stages too)
+  const cumulativeFunnelData = useMemo(() => {
+    if (funnelData.length === 0) return [];
+
+    return funnelData.map((stage, i) => {
+      // Cumulative: this stage + all stages after it
+      const cumulativeValue = funnelData.slice(i).reduce((sum, s) => sum + s.value, 0);
+      return {
+        ...stage,
+        cumulativeValue,
+      };
+    });
+  }, [funnelData]);
 
   const conversionByOrigin = useMemo(() => {
     const origensMap = new Map<string, { total: number; convertidos: number }>();
@@ -61,14 +84,7 @@ export default function CRMMetricsPanel({ leads }: CRMMetricsPanelProps) {
     return Math.round((converted / leads.length) * 100);
   }, [leads]);
 
-  const avgConversionTime = useMemo(() => {
-    const convertedLeads = leads.filter(l => l.convertido_paciente_id);
-    if (convertedLeads.length === 0) return null;
-    // Placeholder — would need conversion date for real calculation
-    return null;
-  }, [leads]);
-
-  if (leads.length === 0) return null;
+  if (leads.length === 0 && funilEtapas.length === 0) return null;
 
   return (
     <div className="dental-card overflow-hidden">
@@ -99,13 +115,13 @@ export default function CRMMetricsPanel({ leads }: CRMMetricsPanelProps) {
               Funil de Conversão
             </h4>
             <div className="space-y-2">
-              {funnelData.map((stage, i) => {
-                const maxValue = funnelData[0].value || 1;
-                const widthPercent = Math.max((stage.value / maxValue) * 100, 15);
+              {cumulativeFunnelData.map((stage, i) => {
+                const maxValue = cumulativeFunnelData[0]?.cumulativeValue || 1;
+                const widthPercent = Math.max((stage.cumulativeValue / maxValue) * 100, 15);
                 const convRate = i === 0
                   ? 100
-                  : funnelData[0].value > 0
-                    ? Math.round((stage.value / funnelData[0].value) * 100)
+                  : maxValue > 0
+                    ? Math.round((stage.cumulativeValue / maxValue) * 100)
                     : 0;
 
                 return (
@@ -114,7 +130,7 @@ export default function CRMMetricsPanel({ leads }: CRMMetricsPanelProps) {
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-foreground">{stage.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          {stage.value} · {convRate}%
+                          {stage.value} na etapa · {convRate}%
                         </span>
                       </div>
                       <div className="h-7 bg-muted/50 rounded-md overflow-hidden">
@@ -125,9 +141,9 @@ export default function CRMMetricsPanel({ leads }: CRMMetricsPanelProps) {
                             backgroundColor: stage.fill,
                           }}
                         >
-                          {stage.value > 0 && (
+                          {stage.cumulativeValue > 0 && (
                             <span className="text-[10px] font-bold text-white whitespace-nowrap">
-                              {stage.value}
+                              {stage.cumulativeValue}
                             </span>
                           )}
                         </div>
@@ -138,17 +154,14 @@ export default function CRMMetricsPanel({ leads }: CRMMetricsPanelProps) {
               })}
             </div>
 
-            {/* Drop-off indicators */}
+            {/* Per-stage counts */}
             <div className="mt-3 flex flex-wrap gap-2">
-              {funnelData.slice(1).map((stage, i) => {
-                const prev = funnelData[i].value;
-                const dropOff = prev > 0 ? Math.round(((prev - stage.value) / prev) * 100) : 0;
-                return (
-                  <div key={stage.name} className="text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                    {funnelData[i].name.split(' ')[0]} → {stage.name.split(' ')[0]}: <span className={dropOff > 50 ? 'text-destructive font-semibold' : 'font-medium'}>{dropOff}% perda</span>
-                  </div>
-                );
-              })}
+              {funnelData.map((stage) => (
+                <div key={stage.name} className="text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: stage.fill }} />
+                  {stage.name}: <span className="font-semibold">{stage.value}</span>
+                </div>
+              ))}
             </div>
           </div>
 

@@ -5,8 +5,124 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Save, Loader2, Upload, X } from 'lucide-react';
+import { Building2, Save, Loader2, Upload, X, Palette } from 'lucide-react';
 import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+// Convert HEX to HSL string (without "hsl()" wrapper, space-separated for CSS vars)
+function hexToHsl(hex: string): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return '199 89% 38%';
+
+  let r = parseInt(result[1], 16) / 255;
+  let g = parseInt(result[2], 16) / 255;
+  let b = parseInt(result[3], 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+// Convert HSL string to HEX
+function hslToHex(hslStr: string): string {
+  const parts = hslStr.replace(/,/g, '').split(/\s+/);
+  if (parts.length < 3) return '#0c84ab';
+
+  const h = parseFloat(parts[0]) / 360;
+  const s = parseFloat(parts[1]) / 100;
+  const l = parseFloat(parts[2]) / 100;
+
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+
+  const toHex = (x: number) => {
+    const hex = Math.round(x * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+interface ColorPickerFieldProps {
+  label: string;
+  hslValue: string;
+  onChange: (hsl: string) => void;
+}
+
+function ColorPickerField({ label, hslValue, onChange }: ColorPickerFieldProps) {
+  const hexValue = hslToHex(hslValue);
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="w-full flex items-center gap-3 px-3 py-2.5 border border-border rounded-lg bg-card hover:bg-muted/50 transition-colors text-left"
+          >
+            <div
+              className="w-8 h-8 rounded-md border border-border/50 shadow-sm shrink-0"
+              style={{ backgroundColor: hexValue }}
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">{hexValue.toUpperCase()}</p>
+              <p className="text-[10px] text-muted-foreground">HSL: {hslValue}</p>
+            </div>
+            <Palette size={14} className="text-muted-foreground shrink-0" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-4" align="start">
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+            <input
+              type="color"
+              value={hexValue}
+              onChange={(e) => onChange(hexToHsl(e.target.value))}
+              className="w-48 h-40 rounded-lg cursor-pointer border-0 p-0 bg-transparent"
+              style={{ WebkitAppearance: 'none' }}
+            />
+            <div className="flex items-center gap-2 pt-1">
+              <div
+                className="w-6 h-6 rounded-full border border-border/50"
+                style={{ backgroundColor: hexValue }}
+              />
+              <span className="text-xs font-mono text-muted-foreground">{hexValue.toUpperCase()}</span>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 export default function ClinicaTab() {
   const { clinica, loading, updateClinica, createClinica } = useClinica();
@@ -44,7 +160,6 @@ export default function ClinicaTab() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate
     if (!file.type.startsWith('image/')) {
       toast.error('Por favor, envie apenas imagens (PNG, JPG, SVG).');
       return;
@@ -197,15 +312,16 @@ export default function ClinicaTab() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="cor_primaria">Cor Primária (HSL)</Label>
-                <Input id="cor_primaria" value={form.cor_primaria} onChange={e => setForm(f => ({ ...f, cor_primaria: e.target.value }))} placeholder="199 89% 38%" />
-                <p className="text-xs text-muted-foreground">Formato HSL compatível com o sistema (Ex: 199 89% 38%)</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cor_secundaria">Cor Secundária (HSL)</Label>
-                <Input id="cor_secundaria" value={form.cor_secundaria} onChange={e => setForm(f => ({ ...f, cor_secundaria: e.target.value }))} placeholder="199 89% 28%" />
-              </div>
+              <ColorPickerField
+                label="Cor Primária"
+                hslValue={form.cor_primaria}
+                onChange={(hsl) => setForm(f => ({ ...f, cor_primaria: hsl }))}
+              />
+              <ColorPickerField
+                label="Cor Secundária"
+                hslValue={form.cor_secundaria}
+                onChange={(hsl) => setForm(f => ({ ...f, cor_secundaria: hsl }))}
+              />
             </div>
           </div>
         </div>
