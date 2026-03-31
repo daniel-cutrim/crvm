@@ -31,7 +31,7 @@ function useSupabaseTable<T extends { id: string }>(
     const { data: result } = await sb.from(table)
       .select(selectQuery)
       .order(orderBy, { ascending });
-    setData((result || []) as T[]);
+    setData((result as unknown as T[] | null) || []);
     setLoading(false);
   }, [table, selectQuery, orderBy, ascending]);
 
@@ -39,29 +39,29 @@ function useSupabaseTable<T extends { id: string }>(
 
   const add = async (item: Record<string, unknown>) => {
     const sb = supabase;
-    const { data: result, error } = await sb.from(table)
+    const { data: result, error } = await (sb.from(table) as any)
       .insert(item).select(selectQuery).single();
     if (!error && result) {
-      setData(prev => [...prev, result as T]);
+      setData(prev => [...prev, result as unknown as T]);
       logger.info(`Create ${table}`, { 
         tabela: table, 
-        registro_id: result.id, 
+        registro_id: (result as any).id, 
         clinica_id: usuario?.clinica_id, 
         usuario_id: usuario?.id,
         detalhes: { item } 
       });
     } else if (error) {
-      logger.error(`Create Error ${table}`, error, { tabela: table, clinica_id: usuario?.clinica_id, usuario_id: usuario?.id });
+      logger.error(`Create Error ${table}`, { error, tabela: table, clinica_id: usuario?.clinica_id, usuario_id: usuario?.id });
     }
-    return { data: result as T | null, error };
+    return { data: result as unknown as T | null, error };
   };
 
   const update = async (id: string, updates: Record<string, unknown>) => {
     const sb = supabase;
-    const { data: result, error } = await sb.from(table)
+    const { data: result, error } = await (sb.from(table) as any)
       .update(updates).eq('id', id).select(selectQuery).single();
     if (!error && result) {
-      setData(prev => prev.map(d => d.id === id ? result as T : d));
+      setData(prev => prev.map(d => d.id === id ? result as unknown as T : d));
       logger.info(`Update ${table}`, { 
         tabela: table, 
         registro_id: id, 
@@ -70,9 +70,9 @@ function useSupabaseTable<T extends { id: string }>(
         detalhes: { updates } 
       });
     } else if (error) {
-      logger.error(`Update Error ${table}`, error, { tabela: table, registro_id: id, clinica_id: usuario?.clinica_id, usuario_id: usuario?.id });
+      logger.error(`Update Error ${table}`, { error, tabela: table, registro_id: id, clinica_id: usuario?.clinica_id, usuario_id: usuario?.id });
     }
-    return { data: result as T | null, error };
+    return { data: result as unknown as T | null, error };
   };
 
   const remove = async (id: string) => {
@@ -87,7 +87,7 @@ function useSupabaseTable<T extends { id: string }>(
         usuario_id: usuario?.id 
       });
     } else if (error) {
-      logger.error(`Delete Error ${table}`, error, { tabela: table, registro_id: id, clinica_id: usuario?.clinica_id, usuario_id: usuario?.id });
+      logger.error(`Delete Error ${table}`, { error, tabela: table, registro_id: id, clinica_id: usuario?.clinica_id, usuario_id: usuario?.id });
     }
     return { error };
   };
@@ -148,7 +148,7 @@ export function useLeads() {
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
-    setLeads((data || []) as Lead[]);
+    setLeads((data as unknown as Lead[] | null) || []);
     setLoading(false);
   }, []);
 
@@ -156,23 +156,25 @@ export function useLeads() {
     fetchLeads();
     const channel = supabase
       .channel('leads-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload: Record<string, unknown>) => {
-        if (payload.eventType === 'INSERT') setLeads(prev => [payload.new as Lead, ...prev]);
-        else if (payload.eventType === 'UPDATE') setLeads(prev => prev.map(l => l.id === payload.new.id ? payload.new as Lead : l));
-        else if (payload.eventType === 'DELETE') setLeads(prev => prev.filter(l => l.id !== payload.old.id));
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
+        const newRecord = payload.new as Record<string, unknown> | undefined;
+        const oldRecord = payload.old as Record<string, unknown> | undefined;
+        if (payload.eventType === 'INSERT' && newRecord) setLeads(prev => [newRecord as unknown as Lead, ...prev]);
+        else if (payload.eventType === 'UPDATE' && newRecord) setLeads(prev => prev.map(l => l.id === (newRecord as any).id ? newRecord as unknown as Lead : l));
+        else if (payload.eventType === 'DELETE' && oldRecord) setLeads(prev => prev.filter(l => l.id !== (oldRecord as any).id));
       }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [fetchLeads]);
 
   const addLead = async (lead: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('leads').insert(lead).select().single();
-    if (!error && data) setLeads(prev => [data as Lead, ...prev]);
-    return { data: data as Lead | null, error };
+    const { data, error } = await (supabase.from('leads') as any).insert(lead).select().single();
+    if (!error && data) setLeads(prev => [data as unknown as Lead, ...prev]);
+    return { data: data as unknown as Lead | null, error };
   };
   const updateLead = async (id: string, updates: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('leads').update(updates).eq('id', id).select().single();
-    if (!error && data) setLeads(prev => prev.map(l => l.id === id ? data as Lead : l));
-    return { data: data as Lead | null, error };
+    const { data, error } = await (supabase.from('leads') as any).update(updates).eq('id', id).select().single();
+    if (!error && data) setLeads(prev => prev.map(l => l.id === id ? data as unknown as Lead : l));
+    return { data: data as unknown as Lead | null, error };
   };
   const deleteLead = async (id: string) => {
     const { error } = await supabase.from('leads').delete().eq('id', id);
@@ -192,17 +194,17 @@ export function useLeadHistorico(leadId: string | null) {
     setLoading(true);
     const { data } = await supabase.from('leads_historico')
       .select('*, usuario:usuarios(*)').eq('lead_id', leadId).order('created_at', { ascending: false });
-    setHistorico((data || []) as LeadHistorico[]);
+    setHistorico((data as unknown as LeadHistorico[] | null) || []);
     setLoading(false);
   }, [leadId]);
 
   useEffect(() => { fetchHistorico(); }, [fetchHistorico]);
 
   const addHistorico = async (item: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('leads_historico')
+    const { data, error } = await (supabase.from('leads_historico') as any)
       .insert(item).select('*, usuario:usuarios(*)').single();
-    if (!error && data) setHistorico(prev => [data as LeadHistorico, ...prev]);
-    return { data: data as LeadHistorico | null, error };
+    if (!error && data) setHistorico(prev => [data as unknown as LeadHistorico, ...prev]);
+    return { data: data as unknown as LeadHistorico | null, error };
   };
 
   return { historico, loading, fetchHistorico, addHistorico };
@@ -217,7 +219,7 @@ export function useLeadJornada(leadId: string | null) {
     setLoading(true);
     const { data } = await supabase.from('lead_jornada')
       .select('*').eq('lead_id', leadId).order('created_at', { ascending: true });
-    setJornada((data || []) as LeadJornada[]);
+    setJornada((data as unknown as LeadJornada[] | null) || []);
     setLoading(false);
   }, [leadId]);
 
@@ -240,22 +242,22 @@ export function usePlanoItens(planoId: string | null) {
     setLoading(true);
     const { data } = await supabase.from('planos_tratamento_itens')
       .select('*').eq('plano_id', planoId).order('created_at');
-    setItens((data || []) as PlanoTratamentoItem[]);
+    setItens((data as unknown as PlanoTratamentoItem[] | null) || []);
     setLoading(false);
   }, [planoId]);
 
   useEffect(() => { fetchItens(); }, [fetchItens]);
 
   const addItem = async (item: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('planos_tratamento_itens').insert(item).select().single();
-    if (!error && data) setItens(prev => [...prev, data as PlanoTratamentoItem]);
-    return { data: data as PlanoTratamentoItem | null, error };
+    const { data, error } = await (supabase.from('planos_tratamento_itens') as any).insert(item).select().single();
+    if (!error && data) setItens(prev => [...prev, data as unknown as PlanoTratamentoItem]);
+    return { data: data as unknown as PlanoTratamentoItem | null, error };
   };
   const updateItem = async (id: string, updates: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('planos_tratamento_itens')
+    const { data, error } = await (supabase.from('planos_tratamento_itens') as any)
       .update(updates).eq('id', id).select().single();
-    if (!error && data) setItens(prev => prev.map(i => i.id === id ? data as PlanoTratamentoItem : i));
-    return { data: data as PlanoTratamentoItem | null, error };
+    if (!error && data) setItens(prev => prev.map(i => i.id === id ? data as unknown as PlanoTratamentoItem : i));
+    return { data: data as unknown as PlanoTratamentoItem | null, error };
   };
   const deleteItem = async (id: string) => {
     const { error } = await supabase.from('planos_tratamento_itens').delete().eq('id', id);
@@ -304,12 +306,12 @@ export function useClinica() {
   }, []);
 
   const updateClinica = async (id: string, updates: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('clinica').update(updates).eq('id', id).select().single();
+    const { data, error } = await (supabase.from('clinica') as any).update(updates).eq('id', id).select().single();
     if (!error && data) setClinica(data as Clinica);
     return { data: data as Clinica | null, error };
   };
   const createClinica = async (item: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('clinica').insert(item).select().single();
+    const { data, error } = await (supabase.from('clinica') as any).insert(item).select().single();
     if (!error && data) setClinica(data as Clinica);
     return { data: data as Clinica | null, error };
   };
@@ -324,15 +326,15 @@ export function useNotificationSettings() {
   useEffect(() => {
     (async () => {
     const { data } = await supabase.from('notification_settings').select('*');
-      setSettings((data || []) as NotificationSettings[]);
+      setSettings((data as unknown as NotificationSettings[] | null) || []);
       setLoading(false);
     })();
   }, []);
 
   const updateSettings = async (id: string, updates: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('notification_settings').update(updates).eq('id', id).select().single();
-    if (!error && data) setSettings(prev => prev.map(s => s.id === id ? data as NotificationSettings : s));
-    return { data: data as NotificationSettings | null, error };
+    const { data, error } = await (supabase.from('notification_settings') as any).update(updates).eq('id', id).select().single();
+    if (!error && data) setSettings(prev => prev.map(s => s.id === id ? data as unknown as NotificationSettings : s));
+    return { data: data as unknown as NotificationSettings | null, error };
   };
 
   return { settings, loading, updateSettings };
@@ -347,16 +349,16 @@ export function usePacienteDocumentos(pacienteId: string | null) {
     setLoading(true);
     const { data } = await supabase.from('paciente_documentos')
       .select('*').eq('paciente_id', pacienteId).order('created_at', { ascending: false });
-    setDocumentos((data || []) as PacienteDocumento[]);
+    setDocumentos((data as unknown as PacienteDocumento[] | null) || []);
     setLoading(false);
   }, [pacienteId]);
 
   useEffect(() => { fetchDocumentos(); }, [fetchDocumentos]);
 
   const addDocumento = async (doc: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('paciente_documentos').insert(doc).select().single();
-    if (!error && data) setDocumentos(prev => [data as PacienteDocumento, ...prev]);
-    return { data: data as PacienteDocumento | null, error };
+    const { data, error } = await (supabase.from('paciente_documentos') as any).insert(doc).select().single();
+    if (!error && data) setDocumentos(prev => [data as unknown as PacienteDocumento, ...prev]);
+    return { data: data as unknown as PacienteDocumento | null, error };
   };
   const deleteDocumento = async (id: string, storagePath: string) => {
     await supabase.storage.from('paciente-documentos').remove([storagePath]);
@@ -377,24 +379,24 @@ export function useProntuario(pacienteId: string | null) {
     setLoading(true);
     const { data } = await supabase.from('prontuario_entradas')
       .select('*, dentista:usuarios!dentista_id(*)').eq('paciente_id', pacienteId).order('data_registro', { ascending: false });
-    setEntradas((data || []) as ProntuarioEntrada[]);
+    setEntradas((data as unknown as ProntuarioEntrada[] | null) || []);
     setLoading(false);
   }, [pacienteId]);
 
   useEffect(() => { fetchEntradas(); }, [fetchEntradas]);
 
   const addEntrada = async (item: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('prontuario_entradas')
+    const { data, error } = await (supabase.from('prontuario_entradas') as any)
       .insert(item).select('*, dentista:usuarios!dentista_id(*)').single();
-    if (!error && data) setEntradas(prev => [data as ProntuarioEntrada, ...prev]);
-    return { data: data as ProntuarioEntrada | null, error };
+    if (!error && data) setEntradas(prev => [data as unknown as ProntuarioEntrada, ...prev]);
+    return { data: data as unknown as ProntuarioEntrada | null, error };
   };
 
   const updateEntrada = async (id: string, updates: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('prontuario_entradas')
+    const { data, error } = await (supabase.from('prontuario_entradas') as any)
       .update(updates).eq('id', id).select('*, dentista:usuarios!dentista_id(*)').single();
-    if (!error && data) setEntradas(prev => prev.map(e => e.id === id ? data as ProntuarioEntrada : e));
-    return { data: data as ProntuarioEntrada | null, error };
+    if (!error && data) setEntradas(prev => prev.map(e => e.id === id ? data as unknown as ProntuarioEntrada : e));
+    return { data: data as unknown as ProntuarioEntrada | null, error };
   };
 
   const deleteEntrada = async (id: string) => {
@@ -417,17 +419,17 @@ export function useOdontograma(pacienteId: string | null) {
       .select('*, dentista:usuarios!dentista_id(id, nome)')
       .eq('paciente_id', pacienteId)
       .order('created_at', { ascending: false });
-    setEntradas((data || []) as OdontogramaEntrada[]);
+    setEntradas((data as unknown as OdontogramaEntrada[] | null) || []);
     setLoading(false);
   }, [pacienteId]);
 
   useEffect(() => { fetchEntradas(); }, [fetchEntradas]);
 
   const addEntrada = async (item: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('odontograma_entradas')
+    const { data, error } = await (supabase.from('odontograma_entradas') as any)
       .insert(item).select('*, dentista:usuarios!dentista_id(id, nome)').single();
-    if (!error && data) setEntradas(prev => [data as OdontogramaEntrada, ...prev]);
-    return { data: data as OdontogramaEntrada | null, error };
+    if (!error && data) setEntradas(prev => [data as unknown as OdontogramaEntrada, ...prev]);
+    return { data: data as unknown as OdontogramaEntrada | null, error };
   };
 
   const deleteEntrada = async (id: string) => {
@@ -451,7 +453,7 @@ export function useIntegracoes() {
   useEffect(() => {
     (async () => {
     const { data } = await supabase.from('integracoes').select('*');
-      setIntegracoes((data || []) as Integracao[]);
+      setIntegracoes((data as unknown as Integracao[] | null) || []);
       setLoading(false);
     })();
   }, []);
@@ -460,23 +462,23 @@ export function useIntegracoes() {
     // Upsert logic: check if exists
     const existing = integracoes.find(i => i.tipo === tipo);
     if (existing) {
-    const { data, error } = await supabase.from('integracoes')
-        .update({ credentials, ativo, updated_at: new Date().toISOString() })
+    const { data, error } = await (supabase.from('integracoes') as any)
+        .update({ credentials: credentials as any, ativo, updated_at: new Date().toISOString() })
         .eq('id', existing.id)
         .select().single();
       if (!error && data) {
-        setIntegracoes(prev => prev.map(i => i.id === existing.id ? data as Integracao : i));
+        setIntegracoes(prev => prev.map(i => i.id === existing.id ? data as unknown as Integracao : i));
       }
-      return { data: data as Integracao | null, error };
+      return { data: data as unknown as Integracao | null, error };
     } else {
       // Create new
-    const { data, error } = await supabase.from('integracoes')
-        .insert({ tipo, credentials, ativo })
+    const { data, error } = await (supabase.from('integracoes') as any)
+        .insert({ tipo, credentials: credentials as any, ativo })
         .select().single();
       if (!error && data) {
-        setIntegracoes(prev => [...prev, data as Integracao]);
+        setIntegracoes(prev => [...prev, data as unknown as Integracao]);
       }
-      return { data: data as Integracao | null, error };
+      return { data: data as unknown as Integracao | null, error };
     }
   };
 
@@ -502,33 +504,58 @@ export function useFunilEtapas(funilId: string | null) {
     setLoading(true);
     const { data } = await supabase.from('funil_etapas')
       .select('*').eq('funil_id', funilId).order('ordem', { ascending: true });
-    setEtapas((data || []) as FunilEtapa[]);
+    // Map DB columns (created_at) to app type (criado_em)
+    const mapped = (data || []).map(row => ({
+      id: row.id,
+      funil_id: row.funil_id,
+      nome: row.nome,
+      ordem: row.ordem,
+      cor: row.cor || '#6b7280',
+      criado_em: row.created_at,
+    })) as FunilEtapa[];
+    setEtapas(mapped);
     setLoading(false);
   }, [funilId]);
 
   useEffect(() => { fetchEtapas(); }, [fetchEtapas]);
 
   const addEtapa = async (item: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('funil_etapas').insert(item).select().single();
+    const { data, error } = await (supabase.from('funil_etapas') as any).insert(item).select().single();
     if (!error && data) {
+      const mapped: FunilEtapa = {
+        id: (data as any).id,
+        funil_id: (data as any).funil_id,
+        nome: (data as any).nome,
+        ordem: (data as any).ordem,
+        cor: (data as any).cor || '#6b7280',
+        criado_em: (data as any).created_at,
+      };
       setEtapas(prev => {
-        const next = [...prev, data as FunilEtapa];
+        const next = [...prev, mapped];
         return next.sort((a,b) => a.ordem - b.ordem);
       });
     }
-    return { data: data as FunilEtapa | null, error };
+    return { data: data ? { id: (data as any).id, funil_id: (data as any).funil_id, nome: (data as any).nome, ordem: (data as any).ordem, cor: (data as any).cor || '#6b7280', criado_em: (data as any).created_at } as FunilEtapa : null, error };
   };
 
   const updateEtapa = async (id: string, updates: Record<string, unknown>) => {
-    const { data, error } = await supabase.from('funil_etapas')
+    const { data, error } = await (supabase.from('funil_etapas') as any)
       .update(updates).eq('id', id).select().single();
     if (!error && data) {
+      const mapped: FunilEtapa = {
+        id: (data as any).id,
+        funil_id: (data as any).funil_id,
+        nome: (data as any).nome,
+        ordem: (data as any).ordem,
+        cor: (data as any).cor || '#6b7280',
+        criado_em: (data as any).created_at,
+      };
       setEtapas(prev => {
-        const next = prev.map(e => e.id === id ? data as FunilEtapa : e);
+        const next = prev.map(e => e.id === id ? mapped : e);
         return next.sort((a,b) => a.ordem - b.ordem);
       });
     }
-    return { data: data as FunilEtapa | null, error };
+    return { data: data ? { id: (data as any).id, funil_id: (data as any).funil_id, nome: (data as any).nome, ordem: (data as any).ordem, cor: (data as any).cor || '#6b7280', criado_em: (data as any).created_at } as FunilEtapa : null, error };
   };
 
   const deleteEtapa = async (id: string) => {

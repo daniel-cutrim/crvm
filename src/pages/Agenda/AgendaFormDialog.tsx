@@ -6,9 +6,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { buildAppointmentTimestamp, getAppointmentFormValues } from '@/utils/appointmentDateTime';
-import type { Consulta, Paciente, Usuario } from '@/types';
+import type { Paciente, Usuario as DBUsuario } from '@/types';
+import type { Usuario as AuthUsuario } from '@/contexts/AuthContext';
+import type { AgendaEvent } from '@/hooks/useAgenda';
 
-const STATUSES = ['Agendada', 'Confirmada', 'Compareceu', 'Faltou', 'Cancelada'];
+const STATUSES = ['Agendada', 'Confirmada', 'Compareceu', 'Faltou', 'Cancelada'] as const;
 const DURATIONS = [15, 30, 45, 60, 90, 120];
 
 interface Props {
@@ -16,11 +18,11 @@ interface Props {
   onClose: () => void;
   onSave: (data: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  consulta: Record<string, unknown> | null;
+  consulta: AgendaEvent | null;
   selectedSlot: { date: Date; hour: number } | null;
-  dentistas: Usuario[];
+  dentistas: DBUsuario[];
   pacientes: Paciente[];
-  usuario: Record<string, unknown>;
+  usuario: AuthUsuario | null;
 }
 
 export default function AgendaFormDialog({

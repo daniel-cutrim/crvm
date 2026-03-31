@@ -1,4 +1,6 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// deno-lint-ignore-file
+// @ts-nocheck - This file runs in Deno/Supabase Edge Functions runtime, not in the main app TypeScript context
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
@@ -7,7 +9,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+// @ts-ignore - Deno global is available in Supabase Edge Functions runtime
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -25,9 +28,16 @@ serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
 
+    // @ts-ignore - Deno.env is available in Supabase Edge Functions runtime
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    // @ts-ignore
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    // @ts-ignore
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      supabaseUrl,
+      supabaseAnonKey,
       { global: { headers: { Authorization: authHeader } } }
     );
 
@@ -39,8 +49,8 @@ serve(async (req) => {
     }
 
     const supabaseService = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      supabaseUrl,
+      supabaseServiceKey
     );
 
     // Get clinica_id of logging user
@@ -82,8 +92,13 @@ serve(async (req) => {
 
     let allTransformedEvents: any[] = [];
 
+    // @ts-ignore - Deno.env is available in Supabase Edge Functions runtime
+    const googleClientId = Deno.env.get("GOOGLE_CLIENT_ID") || "";
+    // @ts-ignore
+    const googleClientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET") || "";
+
     // Process all calendars concurrently
-    await Promise.all(authDatas.map(async (authData) => {
+    await Promise.all(authDatas.map(async (authData: any) => {
       let accessToken = authData.access_token;
       
       try {
@@ -99,8 +114,8 @@ serve(async (req) => {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
-              client_id: Deno.env.get("GOOGLE_CLIENT_ID") || "",
-              client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET") || "",
+              client_id: googleClientId,
+              client_secret: googleClientSecret,
               refresh_token: authData.refresh_token,
               grant_type: "refresh_token",
             }),

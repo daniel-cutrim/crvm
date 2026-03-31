@@ -2,12 +2,12 @@
  * Export utilities for CSV and PDF generation
  */
 
-interface ExportColumn {
+export interface ExportColumn<T = Record<string, unknown>> {
   header: string;
-  accessor: (row: Record<string, unknown>) => string | number;
+  accessor: (row: T) => string | number;
 }
 
-export function exportToCSV(filename: string, columns: ExportColumn[], data: Record<string, unknown>[]) {
+export function exportToCSV<T = Record<string, unknown>>(filename: string, columns: ExportColumn<T>[], data: T[]) {
   const separator = ';';
   const header = columns.map(c => `"${c.header}"`).join(separator);
   const rows = data.map(row =>
@@ -23,7 +23,7 @@ export function exportToCSV(filename: string, columns: ExportColumn[], data: Rec
   downloadBlob(blob, `${filename}.csv`);
 }
 
-export function exportToPDF(title: string, columns: ExportColumn[], data: Record<string, unknown>[]) {
+export function exportToPDF<T = Record<string, unknown>>(title: string, columns: ExportColumn<T>[], data: T[]) {
   const pageWidth = 842;
   const pageHeight = 595;
   const margin = 40;

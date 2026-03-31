@@ -5,6 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Plus, Clock, User, Calendar as CalendarIcon } from 'lucide-react';
 import { useUsuarios, usePacientes, useConsultas } from '@/hooks/useData';
 import { useAgenda, AgendaEvent } from '@/hooks/useAgenda';
+import type { Consulta } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { isDentista, isOnlyDentista } from '@/utils/roles';
 import { getAppointmentDateKey, getAppointmentHour } from '@/utils/appointmentDateTime';
@@ -111,7 +112,7 @@ export default function AgendaPage() {
   };
 
   const handleStatusChange = async (id: string, status: string) => {
-    await updateConsulta(id, { status });
+    await updateConsulta(id, { status: status as Consulta['status'] });
     await fetchAgenda();
   };
 
@@ -318,7 +319,7 @@ export default function AgendaPage() {
         selectedSlot={selectedSlot}
         dentistas={dentistas}
         pacientes={pacientes}
-        usuario={usuario}
+        usuario={usuario ?? null}
       />
     </div>
   );

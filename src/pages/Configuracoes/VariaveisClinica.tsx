@@ -35,7 +35,16 @@ export default function VariaveisClinica() {
     if (data) {
       const mapeado: Record<string, FunilEtapa[]> = {};
       funis.forEach((f) => {
-        mapeado[f.id] = data.filter((etapa) => etapa.funil_id === f.id);
+        mapeado[f.id] = data
+          .filter((etapa) => etapa.funil_id === f.id)
+          .map((etapa) => ({
+            id: etapa.id,
+            funil_id: etapa.funil_id,
+            nome: etapa.nome,
+            ordem: etapa.ordem,
+            cor: etapa.cor || '#6b7280',
+            criado_em: etapa.created_at,
+          }));
       });
       setEtapas(mapeado);
     }
