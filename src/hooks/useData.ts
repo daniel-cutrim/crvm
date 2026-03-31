@@ -28,12 +28,20 @@ function useSupabaseTable<T extends { id: string }>(
   const fetch = useCallback(async () => {
     setLoading(true);
     const sb = supabase;
-    const { data: result } = await sb.from(table)
-      .select(selectQuery)
-      .order(orderBy, { ascending });
+    let query = sb.from(table).select(selectQuery);
+
+    if (usuario?.clinica_id) {
+      if (table === 'clinica') {
+        query = (query as any).eq('id', usuario.clinica_id);
+      } else if (table !== 'usuario_setores') {
+        query = (query as any).eq('clinica_id', usuario.clinica_id);
+      }
+    }
+
+    const { data: result } = await query.order(orderBy, { ascending });
     setData((result as unknown as T[] | null) || []);
     setLoading(false);
-  }, [table, selectQuery, orderBy, ascending]);
+  }, [table, selectQuery, orderBy, ascending, usuario?.clinica_id]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
