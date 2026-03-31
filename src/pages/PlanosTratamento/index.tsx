@@ -62,7 +62,7 @@ export default function PlanosTratamentoPage() {
     forma_pagamento: '' as string,
   });
 
-  const dentistas = usuarios.filter(u => u.papel === 'Dentista' || u.papel === 'Gestor');
+  const dentistas = usuarios.filter(u => u.papel === 'Dentista' || u.papel === 'Gestor' || u.papel === 'Gestor/Dentista');
 
   const filtered = useMemo(() => {
     return planos.filter(p => {
@@ -107,6 +107,7 @@ export default function PlanosTratamentoPage() {
     if (!form.paciente_id || !form.dentista_id) { toast.error('Paciente e dentista são obrigatórios'); return; }
     setSaving(true);
     const payload = {
+      clinica_id: usuario?.clinica_id,
       paciente_id: form.paciente_id,
       dentista_id: form.dentista_id,
       status: form.status,
@@ -260,6 +261,7 @@ export default function PlanosTratamentoPage() {
               const total = Number(detailPlano.valor_total);
               if (total > 0) {
                 const { error } = await addReceita({
+                  clinica_id: usuario?.clinica_id,
                   paciente_id: detailPlano.paciente_id,
                   plano_id: detailPlano.id,
                   procedimento: `Plano de Tratamento - ${detailPlano.paciente?.nome || ''}`,
@@ -333,12 +335,13 @@ export default function PlanosTratamentoPage() {
 // ── Detail Sheet with inline item adding ──
 function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange, onUpdateTotal, onUpdatePayment }: {
   plano: PlanoTratamento;
-  procedimentosPadrao: Record<string, unknown>[];
+  procedimentosPadrao: any[];
   onClose: () => void;
   onStatusChange: (status: string) => Promise<void>;
   onUpdateTotal: (total: number) => Promise<void>;
   onUpdatePayment: (updates: Partial<PlanoTratamento>) => Promise<void>;
 }) {
+  const { usuario } = useAuth();
   const { itens, loading, addItem, updateItem, deleteItem } = usePlanoItens(plano.id);
   const [saving, setSaving] = useState(false);
   const [showCustomItem, setShowCustomItem] = useState(false);
@@ -388,18 +391,18 @@ function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange,
 
   const PARCELA_OPTIONS = [1, 2, 3, 6, 10, 12];
 
-  const activeProcedures = procedimentosPadrao.filter((p: Record<string, unknown>) => p.ativo);
+  const activeProcedures = procedimentosPadrao.filter((p: any) => p.ativo);
 
   const recalcTotal = async (newItens: PlanoTratamentoItem[]) => {
     const total = newItens.reduce((s, i) => s + i.quantidade * Number(i.valor_unitario), 0);
     await onUpdateTotal(total);
   };
 
-  // Quick add from catalog — one click
-  const handleQuickAdd = async (proc: Record<string, unknown>) => {
+  const handleQuickAdd = async (proc: any) => {
     setSaving(true);
     const { data: newItem, error } = await addItem({
       plano_id: plano.id,
+      clinica_id: usuario?.clinica_id,
       procedimento_nome: proc.nome,
       dente_regiao: null,
       quantidade: 1,
@@ -418,6 +421,7 @@ function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange,
     setSaving(true);
     const { data: newItem, error } = await addItem({
       plano_id: plano.id,
+      clinica_id: usuario?.clinica_id,
       procedimento_nome: customItem.procedimento_nome.trim(),
       dente_regiao: customItem.dente_regiao.trim() || null,
       quantidade: parseInt(customItem.quantidade) || 1,
@@ -510,7 +514,7 @@ function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange,
             {/* Procedure catalog — quick add buttons */}
             {activeProcedures.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
-                {activeProcedures.map((proc: Record<string, unknown>) => (
+                {activeProcedures.map((proc: any) => (
                   <button
                     key={proc.id}
                     disabled={saving}

@@ -6,6 +6,7 @@ import { ptBR } from 'date-fns/locale';
 import { useLeadHistorico, useLeadJornada } from '@/hooks/useData';
 import type { Lead } from '@/types';
 import { formatWhatsAppLink } from '@/utils/masks';
+import { useAuth } from '@/contexts/AuthContext';
 
 const TIPOS_CONTATO = ['Ligação', 'WhatsApp', 'E-mail', 'Visita', 'Outro'] as const;
 
@@ -28,6 +29,8 @@ interface Props {
 }
 
 export default function LeadDetailSheet({ lead, onClose, onEdit, onConvert, onDelete, onUpdateLead, usuario }: Props) {
+  const { usuario: authUser } = useAuth();
+  const clinicaNome = authUser?.clinica?.nome || 'MedROI';
   const { historico, addHistorico } = useLeadHistorico(lead?.id || null);
   const { jornada } = useLeadJornada(lead?.id || null);
   const [tipoContato, setTipoContato] = useState<string>('WhatsApp');
@@ -133,7 +136,7 @@ export default function LeadDetailSheet({ lead, onClose, onEdit, onConvert, onDe
           <div className="flex gap-2 mt-4">
             {lead.telefone && (
               <a
-                href={formatWhatsAppLink(lead.telefone, `Olá ${lead.nome}, tudo bem? Aqui é da F&F Odonto! 😊`)}
+                href={formatWhatsAppLink(lead.telefone, `Olá ${lead.nome}, tudo bem? Aqui é da ${clinicaNome}! 😊`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium

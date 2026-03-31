@@ -10,8 +10,9 @@ import KanbanBoard from './KanbanBoard';
 import LeadFormDialog from './LeadFormDialog';
 import LeadDetailSheet from './LeadDetailSheet';
 import CRMMetricsPanel from './CRMMetricsPanel';
+import { toast } from 'sonner';
 
-export default function CRMPage() {
+export default function CRMPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
   const { leads, loading: loadingLeads, addLead, updateLead, deleteLead } = useLeads();
   const { funis, loading: loadingFunis } = useFunis();
   const [selectedFunilId, setSelectedFunilId] = useState<string | null>(null);
@@ -52,13 +53,26 @@ export default function CRMPage() {
   }), [leads]);
 
   const handleSave = async (data: Record<string, unknown>) => {
-    if (editingLead) {
-      await updateLead(editingLead.id, data);
-    } else {
-      await addLead(data);
+    try {
+      if (editingLead) {
+        const { error } = await updateLead(editingLead.id, data);
+        if (error) throw error;
+        toast.success('Lead atualizado com sucesso!');
+      } else {
+        const { error } = await addLead({ 
+          ...data, 
+          clinica_id: usuario?.clinica_id,
+          funil_id: selectedFunilId
+        });
+        if (error) throw error;
+        toast.success('Lead cadastrado com sucesso!');
+      }
+      setFormOpen(false);
+      setEditingLead(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || 'Erro ao salvar o lead');
     }
-    setFormOpen(false);
-    setEditingLead(null);
   };
 
   const handleEdit = (lead: Lead) => {
@@ -183,11 +197,15 @@ export default function CRMPage() {
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               Você ainda não possui funis de venda estruturados.
-              <Link to="/configuracoes?tab=funis">
-                <Button variant="outline" size="sm" className="h-7 text-xs bg-white text-amber-700 hover:bg-amber-100 border-amber-300">
-                  Criar um Funil agora
-                </Button>
-              </Link>
+              <button 
+                onClick={() => {
+                  window.history.pushState({}, '', '?tab=funis');
+                  if (onNavigate) onNavigate('configuracoes');
+                }}
+                className="inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border shadow-sm border-amber-300 bg-white text-amber-700 hover:bg-amber-100 h-7 px-3 text-xs"
+              >
+                Criar um Funil agora
+              </button>
             </div>
           </div>
         )}
@@ -227,6 +245,7 @@ export default function CRMPage() {
         onClose={() => { setFormOpen(false); setEditingLead(null); }}
         onSave={handleSave}
         lead={editingLead}
+        etapas={etapas.map(e => e.nome)}
       />
 
       {/* Detail Sheet */}

@@ -15,7 +15,7 @@ export interface Usuario {
   id: string;
   nome: string;
   email: string;
-  papel: 'Recepção' | 'Dentista' | 'Gestor';
+  papel: 'Recepção' | 'Dentista' | 'Gestor' | 'Gestor/Dentista';
   ativo: boolean;
   clinica_id?: string;
   clinica?: Clinica;

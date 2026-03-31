@@ -102,7 +102,43 @@ export function usePacientes() {
 
 export function useConsultas() {
   const h = useSupabaseTable<Consulta>('consultas', '*, paciente:pacientes(*), lead:leads(*), dentista:usuarios!dentista_id(*)', 'data_hora', true);
-  return { consultas: h.data, loading: h.loading, fetchConsultas: h.fetch, addConsulta: h.add, updateConsulta: h.update, deleteConsulta: h.remove };
+
+  const addConsulta = async (item: Partial<Consulta>) => {
+    const res = await h.add(item as Record<string, unknown>);
+    if (res.data) {
+      // Assíncronamente dispara PUSH sem travar UI
+      supabase.functions.invoke('google-calendar-push', {
+        body: { action: 'create', consulta: res.data, dentista_id: res.data.dentista_id }
+      }).catch(console.error);
+    }
+    return res;
+  };
+
+  const updateConsulta = async (id: string, item: Partial<Consulta>) => {
+    const existing = h.data.find(c => c.id === id);
+    const updated = { ...existing, ...item };
+    const res = await h.update(id, item as Record<string, unknown>);
+    
+    if (!res.error && updated.google_event_id) {
+      supabase.functions.invoke('google-calendar-push', {
+        body: { action: 'update', consulta: updated, dentista_id: updated.dentista_id }
+      }).catch(console.error);
+    }
+    return res;
+  };
+
+  const deleteConsulta = async (id: string) => {
+    const existing = h.data.find(c => c.id === id);
+    const res = await h.remove(id);
+    if (!res.error && existing?.google_event_id) {
+      supabase.functions.invoke('google-calendar-push', {
+        body: { action: 'delete', consulta: existing, dentista_id: existing.dentista_id }
+      }).catch(console.error);
+    }
+    return res;
+  };
+
+  return { consultas: h.data, loading: h.loading, fetchConsultas: h.fetch, addConsulta, updateConsulta, deleteConsulta };
 }
 
 export function useLeads() {

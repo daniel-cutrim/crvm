@@ -52,7 +52,7 @@ export default function PacienteForm({ isOpen, onClose, onSave, onDelete, pacien
     });
   };
 
-  const dentistasList = dentistas.filter(d => d.papel === 'Dentista');
+  const dentistasList = dentistas.filter(d => d.papel === 'Dentista' || d.papel === 'Gestor/Dentista');
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

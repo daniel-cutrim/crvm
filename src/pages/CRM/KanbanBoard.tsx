@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { Lead } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ETAPA_CONFIG: Record<string, { color: string; bg: string; border: string; dropHighlight: string }> = {
   'Novo Lead': { color: 'text-sky-700', bg: 'bg-sky-50', border: 'border-sky-200', dropHighlight: 'ring-sky-400' },
@@ -33,6 +34,8 @@ interface Props {
 export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }: Props) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const { usuario } = useAuth();
+  const clinicaNome = usuario?.clinica?.nome || 'MedROI';
 
   const columns = useMemo(() => {
     return etapas.map(etapa => ({
@@ -177,7 +180,7 @@ export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }:
                   )}
                   {lead.telefone && (
                     <a
-                      href={formatWhatsAppLink(lead.telefone, `Olá ${lead.nome}, tudo bem? Aqui é da F&F Odonto! 😊`)}
+                      href={formatWhatsAppLink(lead.telefone, `Olá ${lead.nome}, tudo bem? Aqui é da ${clinicaNome}! 😊`)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={e => e.stopPropagation()}

@@ -14,7 +14,7 @@ import { Users, Plus, Pencil, Loader2, Calendar as CalendarIcon } from 'lucide-r
 import { toast } from 'sonner';
 import type { Usuario } from '@/types';
 
-const PAPEIS = ['Gestor', 'Dentista', 'Recepção'] as const;
+const PAPEIS = ['Gestor', 'Dentista', 'Gestor/Dentista', 'Recepção'] as const;
 
 export default function UsuariosTab() {
   const { usuarios, loading, addUsuario, updateUsuario } = useUsuarios();
@@ -127,6 +127,7 @@ export default function UsuariosTab() {
   const papelColor = (p: string) => {
     if (p === 'Gestor') return 'bg-primary/10 text-primary border-primary/20';
     if (p === 'Dentista') return 'bg-blue-50 text-blue-700 border-blue-200';
+    if (p === 'Gestor/Dentista') return 'bg-indigo-50 text-indigo-700 border-indigo-200';
     return 'bg-amber-50 text-amber-700 border-amber-200';
   };
 
@@ -239,7 +240,7 @@ export default function UsuariosTab() {
               </div>
             )}
             
-            {form.papel === 'Dentista' && editing && (
+            {(form.papel === 'Dentista' || form.papel === 'Gestor/Dentista') && editing && (
               <div className="space-y-2 pt-2 border-t mt-4">
                 <Label>Integração com Agenda</Label>
                 <div className="flex items-center gap-3 mt-1">

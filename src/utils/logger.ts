@@ -3,13 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 export type LogLevel = 'info' | 'warn' | 'error' | 'action';
 
 export interface LogEntry {
-  level: LogLevel;
-  action: string;
-  details?: Record<string, unknown>;
-  user_id?: string;
+  acao: string;
+  nivel: LogLevel;
+  tabela?: string;
+  registro_id?: string;
+  detalhes?: Record<string, unknown>;
+  usuario_id?: string;
   clinica_id?: string;
-  timestamp: string;
-  path: string;
 }
 
 class LoggerService {
@@ -60,14 +60,17 @@ class LoggerService {
     // 2. Queue for Database Insertion
     const sessionInfo = await this.getCurrentSessionInfo();
     
+    // Note: Use 'any' type cast here or extract 'tabela'/'registro_id' safely
+    const customDetails: any = details || {};
+    
     const entry: LogEntry = {
-      level,
-      action,
-      details,
-      path,
-      timestamp,
-      user_id: sessionInfo?.id,
-      clinica_id: sessionInfo?.clinica_id
+      nivel: level,
+      acao: action,
+      tabela: customDetails?.tabela || undefined,
+      registro_id: customDetails?.registro_id || undefined,
+      detalhes: customDetails?.detalhes ? customDetails.detalhes : { ...customDetails, path, timestamp },
+      usuario_id: customDetails?.usuario_id || sessionInfo?.id,
+      clinica_id: customDetails?.clinica_id || sessionInfo?.clinica_id
     };
 
     this.queue.push(entry);
@@ -92,8 +95,7 @@ class LoggerService {
 
     try {
       // In a real database, we would insert into 'system_logs'
-      // If table doesn't exist yet, this might fail, so we catch silently
-      const { error } = await supabase.from('system_logs').insert(itemsToSync);
+      const { error } = await supabase.from('system_logs').insert(itemsToSync as any);
       if (error) {
         // If it fails (e.g., table missing), put them back in queue
         console.warn('Failed to sync logs to DB, restoring to queue...', error);

@@ -3,6 +3,7 @@ import { Search, Plus, Filter, Phone, Mail, Download, ChevronDown, X, MessageSqu
 import { formatWhatsAppLink } from '@/utils/masks';
 import { usePacientes, useUsuarios, useConsultas, usePlanosTratamento, useReceitas } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
+import { isGestor as isGestorRole, isDentista } from '@/utils/roles';
 import type { Paciente } from '@/types';
 import PacienteForm from './PacienteForm';
 import PacienteDetail from './PacienteDetail';
@@ -15,7 +16,8 @@ export default function PacientesPage() {
   const { consultas } = useConsultas();
   const { planos } = usePlanosTratamento();
   const { receitas } = useReceitas();
-  const isGestor = usuario?.papel === 'Gestor';
+  const isGestor = isGestorRole(usuario?.papel);
+  const clinicaNome = usuario?.clinica?.nome || 'MedROI';
 
   const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -56,7 +58,7 @@ export default function PacientesPage() {
   const handleSave = async (data: Partial<Paciente>) => {
     if (editingPaciente) await updatePaciente(editingPaciente.id, data);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    else await addPaciente(data as any);
+    else await addPaciente({ ...data, clinica_id: usuario?.clinica_id } as any);
     setIsFormOpen(false);
     setEditingPaciente(null);
   };
@@ -275,7 +277,7 @@ export default function PacientesPage() {
                           <a
                             href={formatWhatsAppLink(
                               p.whatsapp || p.telefone!,
-                              `Olá ${p.nome.split(' ')[0]}, tudo bem? Aqui é da F&F Odonto! 😊`
+                              `Olá ${p.nome.split(' ')[0]}, tudo bem? Aqui é da ${clinicaNome}! 😊`
                             )}
                             target="_blank"
                             rel="noopener noreferrer"

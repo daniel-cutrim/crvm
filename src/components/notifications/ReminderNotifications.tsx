@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Consulta, Tarefa } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ReminderNotificationsProps {
   consultas: Consulta[];
@@ -36,19 +37,21 @@ function buildWhatsAppUrl(phone: string, message: string): string {
   return `https://wa.me/${fullNumber}?text=${encodeURIComponent(message)}`;
 }
 
-function buildReminderMessage(consulta: Consulta, type: '24h' | '1h'): string {
+function buildReminderMessage(consulta: Consulta, type: '24h' | '1h', clinicaNome: string): string {
   const dataHora = parseISO(consulta.data_hora);
   const dataFormatada = format(dataHora, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   const procedimento = consulta.tipo_procedimento;
   const dentista = consulta.dentista?.nome || 'seu dentista';
 
   if (type === '24h') {
-    return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! 😊\n\nLembramos que você tem uma consulta agendada para *amanhã*:\n\n📅 ${dataFormatada}\n🦷 ${procedimento}\n👨‍⚕️ Dr(a). ${dentista}\n\nPor favor, confirme sua presença respondendo esta mensagem.\n\nF&F Odonto`;
+    return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! 😊\n\nLembramos que você tem uma consulta agendada para *amanhã*:\n\n📅 ${dataFormatada}\n🦷 ${procedimento}\n👨‍⚕️ Dr(a). ${dentista}\n\nPor favor, confirme sua presença respondendo esta mensagem.\n\n${clinicaNome}`;
   }
-  return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! ⏰\n\nSua consulta é *daqui a 1 hora*:\n\n📅 ${dataFormatada}\n🦷 ${procedimento}\n👨‍⚕️ Dr(a). ${dentista}\n\nEstamos te esperando! 😄\n\nF&F Odonto`;
+  return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! ⏰\n\nSua consulta é *daqui a 1 hora*:\n\n📅 ${dataFormatada}\n🦷 ${procedimento}\n👨‍⚕️ Dr(a). ${dentista}\n\nEstamos te esperando! 😄\n\n${clinicaNome}`;
 }
 
 export default function ReminderNotifications({ consultas, tarefas }: ReminderNotificationsProps) {
+  const { usuario } = useAuth();
+  const clinicaNome = usuario?.clinica?.nome || 'MedROI';
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'consultas' | 'tarefas'>('consultas');
@@ -200,7 +203,7 @@ export default function ReminderNotifications({ consultas, tarefas }: ReminderNo
                 <div className="p-2 space-y-1.5">
                   {reminders.map(({ consulta, type, hoursUntil, minutesUntil }) => {
                     const phone = consulta.paciente?.whatsapp || consulta.paciente?.telefone || consulta.lead?.telefone;
-                    const message = buildReminderMessage(consulta, type);
+                    const message = buildReminderMessage(consulta, type, clinicaNome);
                     const whatsappUrl = buildWhatsAppUrl(phone!, message);
                     const dataHora = parseISO(consulta.data_hora);
                     const isUrgent = type === '1h';

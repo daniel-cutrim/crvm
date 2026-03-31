@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Stethoscope, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle } from 'lucide-react';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -56,8 +56,8 @@ export default function ResetPassword() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-8">
         <div className="text-center max-w-md">
-          <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
-            <Stethoscope className="text-primary-foreground" size={24} />
+          <div className="flex items-center justify-center mx-auto mb-4">
+            <img src="/logo-medroi-final.png" alt="MedROI" className="h-10" />
           </div>
           <h1 className="text-xl font-bold text-foreground mb-2">Link inválido</h1>
           <p className="text-muted-foreground text-sm mb-6">
@@ -91,10 +91,11 @@ export default function ResetPassword() {
     <div className="min-h-screen bg-background flex items-center justify-center p-8">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <Stethoscope className="text-primary-foreground" size={22} />
-          </div>
-          <span className="text-xl font-bold text-foreground">F&F Odonto</span>
+          <img 
+            src="/logo-medroi-final.png" 
+            alt="MedROI" 
+            className="h-9 contrast-125 brightness-[1.05] drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" 
+          />
         </div>
 
         <h2 className="text-2xl font-bold text-foreground mb-1">Nova senha</h2>

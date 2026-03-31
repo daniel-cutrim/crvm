@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Stethoscope, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const { signIn, signUp } = useAuth();
@@ -47,16 +47,17 @@ export default function Login() {
     <div className="min-h-screen bg-background flex">
       {/* Left side - branding */}
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12"
-        style={{ background: 'linear-gradient(135deg, hsl(199, 89%, 38%) 0%, hsl(199, 89%, 28%) 100%)' }}>
+        style={{ background: 'linear-gradient(135deg, hsl(142, 76%, 36%) 0%, hsl(142, 76%, 26%) 100%)' }}>
         <div className="max-w-md text-center">
-          <div className="w-20 h-20 bg-white/15 backdrop-blur rounded-2xl flex items-center justify-center mx-auto mb-8">
-            <Stethoscope className="text-white" size={40} />
+          <div className="-mb-8">
+            <img 
+              src="/logo-medroi-final.png" 
+              alt="MedROI" 
+              className="h-72 mx-auto object-contain contrast-125 brightness-[1.1] drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]" 
+            />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4" style={{ lineHeight: '1.1' }}>
-            F&F Odonto
-          </h1>
           <p className="text-white/80 text-lg">
-            Sistema completo de gestão para sua clínica odontológica
+            CRM + Gestão Clínica completa para sua clínica
           </p>
         </div>
       </div>
@@ -65,10 +66,7 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Stethoscope className="text-primary-foreground" size={22} />
-            </div>
-            <span className="text-xl font-bold text-foreground">F&F Odonto</span>
+            <img src="/logo-medroi-final.png" alt="MedROI" className="h-9" />
           </div>
 
           <h2 className="text-2xl font-bold text-foreground mb-1">

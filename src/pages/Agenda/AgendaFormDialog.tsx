@@ -71,7 +71,7 @@ export default function AgendaFormDialog({
       const h = selectedSlot ? String(selectedSlot.hour).padStart(2, '0') + ':00' : '08:00';
       setFormData({
         paciente_id: '',
-        dentista_id: dentistas.length === 1 ? dentistas[0].id : (usuario?.papel === 'Dentista' ? usuario?.id || '' : ''),
+        dentista_id: dentistas.length === 1 ? dentistas[0].id : ((usuario?.papel === 'Dentista' || usuario?.papel === 'Gestor/Dentista') ? usuario?.id || '' : ''),
         data: d,
         hora: h,
         duracao_minutos: 30,

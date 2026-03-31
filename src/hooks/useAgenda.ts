@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Consulta } from '@/types';
-import { addDays, subDays } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
+import { isOnlyDentista } from '@/utils/roles';
 
 export interface AgendaEvent extends Partial<Consulta> {
   is_google?: boolean;
@@ -16,20 +17,29 @@ export interface AgendaEvent extends Partial<Consulta> {
 }
 
 export function useAgenda(startDate: Date, endDate: Date) {
+  const { usuario } = useAuth();
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAgenda = useCallback(async () => {
+    if (!usuario) return;
     setLoading(true);
     let combinedEvents: AgendaEvent[] = [];
 
     // 1. Fetch Supabase Consultas in range
-    const { data: consultas, error: dbError } = await supabase
+    let query = supabase
       .from('consultas')
       .select('*, paciente:pacientes(*), dentista:usuarios!dentista_id(*)')
       .gte('data_hora', startDate.toISOString())
       .lte('data_hora', endDate.toISOString())
       .order('data_hora', { ascending: true });
+
+    // Restrict if ONLY Dentista
+    if (isOnlyDentista(usuario.papel)) {
+      query = query.eq('dentista_id', usuario.id);
+    }
+
+    const { data: consultas, error: dbError } = await query;
 
     if (!dbError && consultas) {
       combinedEvents = consultas.map(c => ({
@@ -44,7 +54,8 @@ export function useAgenda(startDate: Date, endDate: Date) {
       const { data: googleEvents, error: googleError } = await supabase.functions.invoke('google-calendar-sync', {
         body: { 
           timeMin: startDate.toISOString(), 
-          timeMax: endDate.toISOString() 
+          timeMax: endDate.toISOString(),
+          filter_dentista_id: isOnlyDentista(usuario.papel) ? usuario.id : undefined
         }
       });
       
@@ -61,7 +72,7 @@ export function useAgenda(startDate: Date, endDate: Date) {
 
     setEvents(combinedEvents);
     setLoading(false);
-  }, [startDate, endDate]);
+  }, [startDate, endDate, usuario]);
 
   useEffect(() => {
     fetchAgenda();

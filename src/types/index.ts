@@ -3,7 +3,7 @@ export interface Usuario {
   auth_user_id?: string;
   nome: string;
   email: string;
-  papel: 'Recepção' | 'Dentista' | 'Gestor';
+  papel: 'Recepção' | 'Dentista' | 'Gestor' | 'Gestor/Dentista';
   ativo: boolean;
   created_at: string;
 }
@@ -54,6 +54,7 @@ export interface Consulta {
   status: 'Agendada' | 'Confirmada' | 'Compareceu' | 'Faltou' | 'Cancelada';
   sala: string | null;
   observacoes: string | null;
+  google_event_id: string | null;
   created_at: string;
   paciente?: Paciente;
   lead?: Lead;
@@ -76,6 +77,10 @@ export interface Lead {
   utm_campaign: string | null;
   utm_term: string | null;
   utm_content: string | null;
+  clinica_id?: string | null;
+  setor_id?: string | null;
+  funil_id?: string | null;
+  etapa_id?: string | null;
   created_at: string;
 }
 
@@ -194,6 +199,10 @@ export interface Clinica {
   endereco: string | null;
   telefone: string | null;
   email: string | null;
+  logo_url: string | null;
+  cor_primaria: string | null;
+  cor_secundaria: string | null;
+  dominio: string | null;
   created_at: string;
 }
 

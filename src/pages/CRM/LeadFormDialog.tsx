@@ -11,9 +11,10 @@ interface Props {
   onClose: () => void;
   onSave: (data: Record<string, unknown>) => Promise<void>;
   lead: Lead | null;
+  etapas: string[];
 }
 
-export default function LeadFormDialog({ open, onClose, onSave, lead }: Props) {
+export default function LeadFormDialog({ open, onClose, onSave, lead, etapas = [] }: Props) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     nome: '',
@@ -21,7 +22,7 @@ export default function LeadFormDialog({ open, onClose, onSave, lead }: Props) {
     email: '',
     origem: '',
     interesse: '',
-    etapa_funil: 'Novo Lead',
+    etapa_funil: etapas.length > 0 ? etapas[0] : 'Novo Lead',
     proxima_acao_data: '',
     proxima_acao_tipo: '',
   });
@@ -41,10 +42,10 @@ export default function LeadFormDialog({ open, onClose, onSave, lead }: Props) {
     } else {
       setForm({
         nome: '', telefone: '', email: '', origem: '', interesse: '',
-        etapa_funil: 'Novo Lead', proxima_acao_data: '', proxima_acao_tipo: '',
+        etapa_funil: etapas.length > 0 ? etapas[0] : 'Novo Lead', proxima_acao_data: '', proxima_acao_tipo: '',
       });
     }
-  }, [lead, open]);
+  }, [lead, open, etapas]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,7 +133,7 @@ export default function LeadFormDialog({ open, onClose, onSave, lead }: Props) {
                 onChange={e => setForm(p => ({ ...p, etapa_funil: e.target.value }))}
                 className="dental-input"
               >
-                {ETAPAS.map(et => <option key={et} value={et}>{et}</option>)}
+                {etapas.map(et => <option key={et} value={et}>{et}</option>)}
               </select>
             </div>
           </div>

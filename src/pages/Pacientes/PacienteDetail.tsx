@@ -37,6 +37,7 @@ interface Props {
 
 export default function PacienteDetail({ paciente, consultas, planos, receitas, onBack, onEdit }: Props) {
   const { usuario } = useAuth();
+  const clinicaNome = usuario?.clinica?.nome || 'MedROI';
   const { entradas, loading: loadingPront, addEntrada, deleteEntrada } = useProntuario(paciente.id);
   const { documentos, loading: loadingDocs, addDocumento, deleteDocumento } = usePacienteDocumentos(paciente.id);
 
@@ -173,7 +174,7 @@ export default function PacienteDetail({ paciente, consultas, planos, receitas, 
             <a
               href={formatWhatsAppLink(
                 paciente.whatsapp || paciente.telefone!,
-                `Olá ${paciente.nome.split(' ')[0]}, tudo bem? Aqui é da F&F Odonto! 😊`
+                `Olá ${paciente.nome.split(' ')[0]}, tudo bem? Aqui é da ${clinicaNome}! 😊`
               )}
               target="_blank"
               rel="noopener noreferrer"

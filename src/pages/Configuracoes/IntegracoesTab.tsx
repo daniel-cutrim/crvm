@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Save, Loader2, Calendar, Target, Webhook, Facebook, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import WhatsAppManager from './WhatsAppManager';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function IntegracoesTab() {
   const { integracoes, loading, saveIntegracao } = useIntegracoes();

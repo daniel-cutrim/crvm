@@ -11,6 +11,7 @@ import type { Funil, FunilEtapa } from '@/types';
 
 function FunilDetalhes({ funilId }: { funilId: string }) {
   const { etapas, loading, addEtapa, updateEtapa, deleteEtapa } = useFunilEtapas(funilId);
+  const { usuario } = useAuth();
   const [form, setForm] = useState({ nome: '', cor: '#1992c9' });
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -18,20 +19,24 @@ function FunilDetalhes({ funilId }: { funilId: string }) {
     if (!form.nome.trim()) return;
     try {
       if (editingId) {
-        await updateEtapa(editingId, { nome: form.nome, cor: form.cor });
+        const { error } = await updateEtapa(editingId, { nome: form.nome, cor: form.cor });
+        if (error) throw error;
       } else {
-        await addEtapa({
+        const { error } = await addEtapa({
           funil_id: funilId,
           nome: form.nome,
           cor: form.cor,
-          ordem: etapas.length + 1
+          ordem: etapas.length + 1,
+          clinica_id: usuario?.clinica_id
         });
+        if (error) throw error;
       }
       setForm({ nome: '', cor: '#1992c9' });
       setEditingId(null);
       toast.success('Etapa salva com sucesso');
-    } catch {
-      toast.error('Erro ao salvar etapa');
+    } catch (err: any) {
+      console.error('[FunisTab] Erro ao salvar etapa:', err);
+      toast.error(err?.message || 'Erro ao salvar etapa');
     }
   };
 

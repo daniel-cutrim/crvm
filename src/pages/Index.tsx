@@ -1,5 +1,7 @@
-import { useState, Suspense, lazy } from 'react';
+import { useState, Suspense, lazy, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { isGestor, isOnlyDentista } from '@/utils/roles';
+import { useParams, useNavigate } from 'react-router-dom';
 import DentalLayout from '@/components/layout/DentalLayout';
 import Login from '@/pages/Login';
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
@@ -17,7 +19,27 @@ type Page = 'dashboard' | 'pacientes' | 'agenda' | 'crm' | 'planos' | 'financeir
 
 export default function IndexPage() {
   const { user, usuario, loading } = useAuth();
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+  const { page } = useParams<{ page: string }>();
+  const navigate = useNavigate();
+
+  const validPages: Page[] = ['dashboard', 'pacientes', 'agenda', 'crm', 'planos', 'financeiro', 'marketing', 'chat', 'tarefas', 'configuracoes'];
+  const initialPage = (page && validPages.includes(page as Page)) ? (page as Page) : 'dashboard';
+
+  const [currentPage, setCurrentPage] = useState<Page>(initialPage);
+
+  useEffect(() => {
+    if (page && validPages.includes(page as Page)) {
+      setCurrentPage(page as Page);
+    } else if (!page) {
+      setCurrentPage('dashboard');
+    }
+  }, [page]);
+
+  const handlePageChange = (p: string) => {
+    setCurrentPage(p as Page);
+    if (p === 'dashboard' || p === '') navigate('/');
+    else navigate(`/${p}`);
+  };
 
   if (loading) {
     return (
@@ -35,22 +57,22 @@ export default function IndexPage() {
   const renderPage = () => {
     const papel = usuario.papel;
     switch (currentPage) {
-      case 'dashboard': return <Dashboard onNavigate={(p) => setCurrentPage(p as Page)} />;
+      case 'dashboard': return <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
       case 'pacientes': return <PacientesPage />;
       case 'agenda': return <AgendaPage />;
-      case 'crm': return papel !== 'Dentista' ? <CRMPage /> : <Dashboard />;
+      case 'crm': return !isOnlyDentista(papel) ? <CRMPage onNavigate={(p) => handlePageChange(p as Page)} /> : <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
       case 'planos': return <PlanosTratamentoPage />;
-      case 'financeiro': return papel === 'Gestor' ? <FinanceiroPage /> : <Dashboard />;
-      case 'marketing': return papel === 'Gestor' ? <MarketingPage /> : <Dashboard />;
-      case 'chat': return (papel === 'Gestor' || papel === 'Recepção') ? <ChatPage /> : <Dashboard />;
+      case 'financeiro': return isGestor(papel) ? <FinanceiroPage /> : <Dashboard />;
+      case 'marketing': return isGestor(papel) ? <MarketingPage /> : <Dashboard />;
+      case 'chat': return (isGestor(papel) || papel === 'Recepção') ? <ChatPage /> : <Dashboard />;
       case 'tarefas': return <TarefasPage />;
-      case 'configuracoes': return papel === 'Gestor' ? <ConfiguracoesPage /> : <Dashboard />;
+      case 'configuracoes': return isGestor(papel) ? <ConfiguracoesPage /> : <Dashboard />;
       default: return <Dashboard />;
     }
   };
 
   return (
-    <DentalLayout currentPage={currentPage} onPageChange={(p) => setCurrentPage(p as Page)}>
+    <DentalLayout currentPage={currentPage} onPageChange={handlePageChange}>
       <Suspense fallback={
         <div className="w-full h-full flex flex-col items-center justify-center min-h-[50vh]">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>

@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plus, Clock, User, Calendar as CalendarIcon 
 import { useUsuarios, usePacientes, useConsultas } from '@/hooks/useData';
 import { useAgenda, AgendaEvent } from '@/hooks/useAgenda';
 import { useAuth } from '@/contexts/AuthContext';
+import { isDentista, isOnlyDentista } from '@/utils/roles';
 import { getAppointmentDateKey, getAppointmentHour } from '@/utils/appointmentDateTime';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AgendaFormDialog from './AgendaFormDialog';
@@ -38,12 +39,12 @@ export default function AgendaPage() {
   const { events: consultas, loading, fetchAgenda } = useAgenda(viewStart, viewEnd);
 
   useEffect(() => {
-    if (usuario && usuario.papel === 'Dentista') {
+    if (usuario && isOnlyDentista(usuario.papel)) {
       setSelectedDentista(usuario.id);
     }
   }, [usuario]);
 
-  const dentistas = useMemo(() => usuarios.filter(u => u.papel === 'Dentista' && u.ativo), [usuarios]);
+  const dentistas = useMemo(() => usuarios.filter(u => isDentista(u.papel) && u.ativo), [usuarios]);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -96,6 +97,7 @@ export default function AgendaPage() {
       }
       toast.success('Consulta agendada com sucesso');
     }
+    await fetchAgenda();
     setDialogOpen(false);
     setEditingConsulta(null);
     setSelectedSlot(null);
@@ -103,12 +105,14 @@ export default function AgendaPage() {
 
   const handleDelete = async (id: string) => {
     await deleteConsulta(id);
+    await fetchAgenda();
     setDialogOpen(false);
     setEditingConsulta(null);
   };
 
   const handleStatusChange = async (id: string, status: string) => {
     await updateConsulta(id, { status });
+    await fetchAgenda();
   };
 
   const todayStats = useMemo(() => {
@@ -143,7 +147,7 @@ export default function AgendaPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {usuario?.papel !== 'Dentista' && (
+          {!isOnlyDentista(usuario?.papel) && (
             <Select value={selectedDentista} onValueChange={setSelectedDentista}>
               <SelectTrigger className="w-[200px] h-9">
                 <SelectValue placeholder="Todos os Profissionais" />
