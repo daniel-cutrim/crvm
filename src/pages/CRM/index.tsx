@@ -129,15 +129,19 @@ export default function CRMPage({ onNavigate }: { onNavigate?: (page: string) =>
               : 'Gerencie seus leads e funil de vendas'}
           </p>
         </div>
-        <button
-          onClick={() => { setEditingLead(null); setFormOpen(true); }}
-          disabled={funis.length === 0 || etapas.length === 0}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
-          title={(funis.length === 0 || etapas.length === 0) ? "Crie um funil com etapas para adicionar leads" : ""}
+        <span 
+          title={funis.length === 0 ? "Pendente: Crie um funil de vendas primeiro" : etapas.length === 0 ? "Pendente: Adicione pelo menos uma etapa ao funil" : ""}
+          className={funis.length === 0 || etapas.length === 0 ? "cursor-not-allowed inline-block" : "inline-block"}
         >
-          <Plus size={16} />
-          Novo Lead
-        </button>
+          <button
+            onClick={() => { setEditingLead(null); setFormOpen(true); }}
+            disabled={funis.length === 0 || etapas.length === 0}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none"
+          >
+            <Plus size={16} />
+            Novo Lead
+          </button>
+        </span>
       </div>
 
       {/* Stats */}
