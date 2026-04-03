@@ -86,7 +86,7 @@ export default function AgendaFormDialog({
       });
       setCalendarDate(selectedSlot?.date || new Date());
     }
-  }, [consulta, selectedSlot, open, dentistas, usuario]);
+  }, [consulta, selectedSlot, open, profissionais, usuario]);
 
   const handleCalendarSelect = (date: Date | undefined) => {
     if (date) {

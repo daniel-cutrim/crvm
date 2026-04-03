@@ -118,7 +118,7 @@ export default function PacientesPage() {
           onSave={handleSave}
           onDelete={handleDelete}
           paciente={editingPaciente}
-          dentistas={usuarios}
+          profissionais={usuarios}
           isGestor={isGestor}
         />
       </>
@@ -312,7 +312,7 @@ export default function PacientesPage() {
         onSave={handleSave}
         onDelete={handleDelete}
         paciente={editingPaciente}
-        dentistas={usuarios}
+        profissionais={usuarios}
         isGestor={isGestor}
       />
     </>

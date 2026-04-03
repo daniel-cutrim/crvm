@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 import { confirmDialog } from '@/components/ui/confirm-dialog';
 import { usePlanosTratamento, usePlanoItens, useUsuarios, usePacientes, useProcedimentosPadrao, useReceitas } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -344,6 +345,7 @@ function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange,
   onUpdatePayment: (updates: Partial<PlanoTratamento>) => Promise<void>;
 }) {
   const { usuario } = useAuth();
+  const { isOdontologia } = useClinicaConfig();
   const { itens, loading, addItem, updateItem, deleteItem } = usePlanoItens(plano.id);
   const [saving, setSaving] = useState(false);
   const [showCustomItem, setShowCustomItem] = useState(false);
