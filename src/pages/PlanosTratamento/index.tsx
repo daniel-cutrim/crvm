@@ -17,8 +17,9 @@ import {
   DollarSign, CheckCircle2, Clock, ShoppingCart,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { toast } from 'sonner';
 import type { PlanoTratamento, PlanoTratamentoItem } from '@/types';
+import { isProfissional } from '@/utils/roles';
+import { useClinicaConfig } from '@/hooks/useClinicaConfig';
 
 const STATUS_OPTIONS = ['Em avaliação', 'Apresentado', 'Aprovado', 'Reprovado', 'Em andamento', 'Concluído'] as const;
 
@@ -44,6 +45,7 @@ export default function PlanosTratamentoPage() {
   const { pacientes } = usePacientes();
   const { procedimentos } = useProcedimentosPadrao();
   const { addReceita } = useReceitas();
+  const { labelProfissional, isOdontologia } = useClinicaConfig();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -62,7 +64,7 @@ export default function PlanosTratamentoPage() {
     forma_pagamento: '' as string,
   });
 
-  const dentistas = usuarios.filter(u => u.papel === 'Dentista' || u.papel === 'Gestor' || u.papel === 'Gestor/Dentista');
+  const profissionais = usuarios.filter(u => isProfissional(u.papel) || u.papel === 'Gestor' || u.papel === 'Gestor/Profissional');
 
   const filtered = useMemo(() => {
     return planos.filter(p => {
@@ -179,7 +181,7 @@ export default function PlanosTratamentoPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por paciente ou dentista..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder={`Buscar por paciente ou ${labelProfissional.toLowerCase()}...`} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-[200px]"><SelectValue /></SelectTrigger>
@@ -197,7 +199,7 @@ export default function PlanosTratamentoPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Paciente</TableHead>
-                <TableHead>Dentista</TableHead>
+                <TableHead>{labelProfissional}</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Valor Total</TableHead>
                 <TableHead>Pagamento</TableHead>
@@ -306,11 +308,11 @@ export default function PlanosTratamentoPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Dentista *</Label>
+              <Label>{labelProfissional} *</Label>
               <Select value={form.dentista_id} onValueChange={v => setForm(f => ({ ...f, dentista_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {dentistas.map(d => <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>)}
+                  {profissionais.map(d => <SelectItem key={d.id} value={d.id}>{isOdontologia ? 'Dr(a). ' : ''}{d.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -417,7 +419,7 @@ function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange,
 
   // Custom item
   const handleAddCustom = async () => {
-    if (!customItem.procedimento_nome.trim()) { toast.error('Nome do procedimento é obrigatório'); return; }
+    if (!customItem.procedimento_nome.trim()) { toast.error('Nome do serviço é obrigatório'); return; }
     setSaving(true);
     const { data: newItem, error } = await addItem({
       plano_id: plano.id,
@@ -489,7 +491,7 @@ function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange,
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">{plano.paciente?.nome}</p>
-              <p className="text-xs text-muted-foreground">Dr(a). {plano.dentista?.nome} · {format(parseISO(plano.created_at), 'dd/MM/yyyy')}</p>
+              <p className="text-xs text-muted-foreground">{isOdontologia && plano.dentista ? 'Dr(a). ' : ''}{plano.dentista?.nome} · {format(parseISO(plano.created_at), 'dd/MM/yyyy')}</p>
             </div>
             <Select value={plano.status} onValueChange={onStatusChange}>
               <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
@@ -532,18 +534,18 @@ function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange,
             {/* Toggle for custom item */}
             {!showCustomItem ? (
               <Button variant="outline" size="sm" className="w-full border-dashed" onClick={() => setShowCustomItem(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Procedimento personalizado
+                <Plus className="h-3.5 w-3.5 mr-1" /> Serviço personalizado
               </Button>
             ) : (
               <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
                 <Input
-                  placeholder="Nome do procedimento"
+                  placeholder="Nome do serviço"
                   value={customItem.procedimento_nome}
                   onChange={e => setCustomItem(f => ({ ...f, procedimento_nome: e.target.value }))}
                 />
                 <div className="grid grid-cols-3 gap-2">
                   <Input
-                    placeholder="Dente/Região"
+                    placeholder="Ref/Região (Opcional)"
                     value={customItem.dente_regiao}
                     onChange={e => setCustomItem(f => ({ ...f, dente_regiao: e.target.value }))}
                   />
@@ -573,14 +575,14 @@ function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange,
 
           {/* ─── ITEMS LIST ─── */}
           <div>
-            <h4 className="text-sm font-semibold mb-3">Procedimentos do Plano</h4>
+            <h4 className="text-sm font-semibold mb-3">Serviços do Plano</h4>
 
             {loading ? (
               <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
             ) : itens.length === 0 ? (
               <div className="text-center py-8 border rounded-lg border-dashed">
                 <ShoppingCart className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">Nenhum procedimento adicionado</p>
+                <p className="text-sm text-muted-foreground">Nenhum serviço adicionado</p>
                 <p className="text-xs text-muted-foreground mt-1">Clique nos serviços acima para adicionar</p>
               </div>
             ) : (
@@ -594,10 +596,10 @@ function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange,
                         <p className="text-sm font-medium">{item.procedimento_nome}</p>
                         <div className="grid grid-cols-3 gap-2">
                           <div>
-                            <Label className="text-xs">Dente/Região</Label>
+                            <Label className="text-xs">Ref/Região</Label>
                             <Input
                               className="h-8 text-sm"
-                              placeholder="Ex: 18"
+                              placeholder="Ex: Rosto, 18..."
                               value={editItemForm.dente_regiao}
                               onChange={e => setEditItemForm(f => ({ ...f, dente_regiao: e.target.value }))}
                             />
@@ -637,7 +639,7 @@ function PlanoDetailSheet({ plano, procedimentosPadrao, onClose, onStatusChange,
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{item.procedimento_nome}</p>
                         <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
-                          {item.dente_regiao && <span>Dente: {item.dente_regiao}</span>}
+                          {item.dente_regiao && <span>Região: {item.dente_regiao}</span>}
                           <span>{item.quantidade}x {formatCurrency(Number(item.valor_unitario))}</span>
                           <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
                         </div>

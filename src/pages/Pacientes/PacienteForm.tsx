@@ -3,6 +3,8 @@ import { confirmDialog } from '@/components/ui/confirm-dialog';
 import type { Paciente, Usuario } from '@/types';
 import { X } from 'lucide-react';
 import { maskCPF, maskPhone, maskCEP } from '@/utils/masks';
+import { isProfissional } from '@/utils/roles';
+import { useClinicaConfig } from '@/hooks/useClinicaConfig';
 
 interface PacienteFormProps {
   isOpen: boolean;
@@ -10,11 +12,12 @@ interface PacienteFormProps {
   onSave: (data: Partial<Paciente>) => void;
   onDelete?: (id: string) => void;
   paciente: Paciente | null;
-  dentistas: Usuario[];
+  profissionais: Usuario[];
   isGestor?: boolean;
 }
 
-export default function PacienteForm({ isOpen, onClose, onSave, onDelete, paciente, dentistas, isGestor }: PacienteFormProps) {
+export default function PacienteForm({ isOpen, onClose, onSave, onDelete, paciente, profissionais, isGestor }: PacienteFormProps) {
+  const { labelProfissional } = useClinicaConfig();
   function getInitialForm(p: Paciente | null) {
     return {
       nome: p?.nome || '', cpf: p?.cpf || '', data_nascimento: p?.data_nascimento || '',
@@ -52,7 +55,7 @@ export default function PacienteForm({ isOpen, onClose, onSave, onDelete, pacien
     });
   };
 
-  const dentistasList = dentistas.filter(d => d.papel === 'Dentista' || d.papel === 'Gestor/Dentista');
+  const profissionaisList = profissionais.filter(d => isProfissional(d.papel));
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -108,10 +111,10 @@ export default function PacienteForm({ isOpen, onClose, onSave, onDelete, pacien
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Dentista Responsável</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">{labelProfissional} Responsável</label>
                 <select value={form.dentista_id} onChange={e => setForm({...form, dentista_id: e.target.value})} className="dental-input">
                   <option value="">Nenhum</option>
-                  {dentistasList.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                  {profissionaisList.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
                 </select>
               </div>
               <div>

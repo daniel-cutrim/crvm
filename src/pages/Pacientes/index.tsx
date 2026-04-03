@@ -3,8 +3,9 @@ import { Search, Plus, Filter, Phone, Mail, Download, ChevronDown, X, MessageSqu
 import { formatWhatsAppLink } from '@/utils/masks';
 import { usePacientes, useUsuarios, useConsultas, usePlanosTratamento, useReceitas } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
-import { isGestor as isGestorRole, isDentista } from '@/utils/roles';
+import { isGestor as isGestorRole, isProfissional } from '@/utils/roles';
 import type { Paciente } from '@/types';
+import { useClinicaConfig } from '@/hooks/useClinicaConfig';
 import PacienteForm from './PacienteForm';
 import PacienteDetail from './PacienteDetail';
 import { exportToCSV, exportToPDF } from '@/utils/export';
@@ -24,8 +25,9 @@ export default function PacientesPage() {
   const [editingPaciente, setEditingPaciente] = useState<Paciente | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [dentistaFilter, setDentistaFilter] = useState('');
+  const [profissionalFilter, setProfissionalFilter] = useState('');
   const [sexoFilter, setSexoFilter] = useState('');
+  const { labelProfissional, isOdontologia } = useClinicaConfig();
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
@@ -41,17 +43,17 @@ export default function PacientesPage() {
         p.telefone?.includes(search) || p.cpf?.includes(search) ||
         p.codigo_paciente?.includes(search);
       const matchStatus = !statusFilter || p.status === statusFilter;
-      const matchDentista = !dentistaFilter || p.dentista_id === dentistaFilter;
+      const matchDentista = !profissionalFilter || p.dentista_id === profissionalFilter;
       const matchSexo = !sexoFilter || p.sexo === sexoFilter;
       return matchSearch && matchStatus && matchDentista && matchSexo;
     });
-  }, [pacientes, search, statusFilter, dentistaFilter, sexoFilter]);
+  }, [pacientes, search, statusFilter, profissionalFilter, sexoFilter]);
 
-  const activeFilterCount = [statusFilter, dentistaFilter, sexoFilter].filter(Boolean).length;
+  const activeFilterCount = [statusFilter, profissionalFilter, sexoFilter].filter(Boolean).length;
 
   const clearFilters = () => {
     setStatusFilter('');
-    setDentistaFilter('');
+    setProfissionalFilter('');
     setSexoFilter('');
   };
 
@@ -75,7 +77,7 @@ export default function PacientesPage() {
     { header: 'Telefone', accessor: (p: Paciente) => p.telefone || '' },
     { header: 'E-mail', accessor: (p: Paciente) => p.email || '' },
     { header: 'Status', accessor: (p: Paciente) => p.status },
-    { header: 'Dentista', accessor: (p: Paciente) => p.dentista?.nome || '' },
+    { header: labelProfissional, accessor: (p: Paciente) => p.dentista?.nome || '' },
     { header: 'Sexo', accessor: (p: Paciente) => p.sexo || '' },
   ];
 
@@ -89,7 +91,7 @@ export default function PacientesPage() {
     setShowExportMenu(false);
   };
 
-  const dentistas = usuarios.filter(u => u.papel === 'Dentista');
+  const profissionais = usuarios.filter(u => isProfissional(u.papel));
 
   const getStatusBadge = (status: string) => {
     const cls: Record<string, string> = {
@@ -209,11 +211,11 @@ export default function PacientesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Dentista</label>
-                  <select value={dentistaFilter} onChange={e => setDentistaFilter(e.target.value)} className="dental-input w-full">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">{labelProfissional}</label>
+                  <select value={profissionalFilter} onChange={e => setProfissionalFilter(e.target.value)} className="dental-input w-full">
                     <option value="">Todos</option>
-                    {dentistas.map(d => (
-                      <option key={d.id} value={d.id}>{d.nome}</option>
+                    {profissionais.map(d => (
+                      <option key={d.id} value={d.id}>{isOdontologia ? 'Dr(a). ' : ''}{d.nome}</option>
                     ))}
                   </select>
                 </div>
@@ -260,7 +262,7 @@ export default function PacientesPage() {
                   <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">E-mail</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden xl:table-cell">CPF</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Dentista</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">{labelProfissional}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

@@ -3,7 +3,8 @@ export interface Usuario {
   auth_user_id?: string;
   nome: string;
   email: string;
-  papel: 'Recepção' | 'Dentista' | 'Gestor' | 'Gestor/Dentista';
+  papel: 'Recepção' | 'Profissional' | 'Gestor' | 'Gestor/Profissional';
+  especialidade?: string | null;
   ativo: boolean;
   created_at: string;
 }

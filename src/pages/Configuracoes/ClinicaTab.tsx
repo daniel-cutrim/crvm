@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, Save, Loader2, Upload, X, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Convert HEX to HSL string (without "hsl()" wrapper, space-separated for CSS vars)
 function hexToHsl(hex: string): string {
@@ -137,6 +138,7 @@ export default function ClinicaTab() {
     telefone: '',
     email: '',
     logo_url: '',
+    tipo_especialidade: 'odontologia',
     cor_primaria: '199 89% 38%',
     cor_secundaria: '199 89% 28%',
   });
@@ -150,6 +152,7 @@ export default function ClinicaTab() {
         telefone: clinica.telefone || '',
         email: clinica.email || '',
         logo_url: clinica.logo_url || '',
+        tipo_especialidade: clinica.tipo_especialidade || 'odontologia',
         cor_primaria: clinica.cor_primaria || '199 89% 38%',
         cor_secundaria: clinica.cor_secundaria || '199 89% 28%',
       });
@@ -250,6 +253,23 @@ export default function ClinicaTab() {
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
             <Input id="email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="contato@clinica.com" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tipo_especialidade">Tipo de Clínica</Label>
+            <Select value={form.tipo_especialidade} onValueChange={v => setForm(f => ({ ...f, tipo_especialidade: v }))} disabled>
+              <SelectTrigger id="tipo_especialidade">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="odontologia">Odontológica</SelectItem>
+                <SelectItem value="medicina">Médica / Geral</SelectItem>
+                <SelectItem value="estetica">Estética</SelectItem>
+                <SelectItem value="psicologia">Psicologia</SelectItem>
+                <SelectItem value="fisioterapia">Fisioterapia</SelectItem>
+                <SelectItem value="outros">Outros</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground mt-1">O tipo de clínica foi definido no cadastro e não pode ser alterado.</p>
           </div>
           <div className="md:col-span-2 space-y-2">
             <Label htmlFor="endereco">Endereço</Label>

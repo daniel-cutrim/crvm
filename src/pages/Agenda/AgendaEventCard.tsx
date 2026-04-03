@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { parseAppointmentDateTime } from '@/utils/appointmentDateTime';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import type { AgendaEvent } from '@/hooks/useAgenda';
+import { useClinicaConfig } from '@/hooks/useClinicaConfig';
 
 const STATUS_STYLES: Record<string, string> = {
   Agendada: 'bg-sky-50 border-sky-200 text-sky-800',
@@ -22,6 +23,7 @@ export default function AgendaEventCard({ consulta, onClick, compact }: Props) {
   const time = format(parseAppointmentDateTime(consulta.data_hora), 'HH:mm');
   const style = consulta.is_google ? STATUS_STYLES.Google : (STATUS_STYLES[consulta.status] || STATUS_STYLES.Agendada);
   const nome = consulta.is_google ? consulta.tipo_procedimento : (consulta.paciente?.nome || consulta.lead?.nome || 'Paciente');
+  const { isOdontologia } = useClinicaConfig();
 
   return (
     <button
@@ -37,7 +39,7 @@ export default function AgendaEventCard({ consulta, onClick, compact }: Props) {
       {!compact && !consulta.is_google && (
         <p className="text-[10px] opacity-70 truncate mt-0.5">
           {consulta.tipo_procedimento}
-          {consulta.dentista ? ` · Dr. ${consulta.dentista.nome.split(' ')[0]}` : ''}
+          {consulta.dentista ? ` · ${isOdontologia ? 'Dr. ' : ''}${consulta.dentista.nome.split(' ')[0]}` : ''}
         </p>
       )}
     </button>

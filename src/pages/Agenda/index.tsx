@@ -7,9 +7,10 @@ import { useUsuarios, usePacientes, useConsultas } from '@/hooks/useData';
 import { useAgenda, AgendaEvent } from '@/hooks/useAgenda';
 import type { Consulta } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { isDentista, isOnlyDentista } from '@/utils/roles';
+import { isProfissional, isOnlyProfissional } from '@/utils/roles';
 import { getAppointmentDateKey, getAppointmentHour } from '@/utils/appointmentDateTime';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useClinicaConfig } from '@/hooks/useClinicaConfig';
 import AgendaFormDialog from './AgendaFormDialog';
 import AgendaEventCard from './AgendaEventCard';
 
@@ -30,7 +31,8 @@ export default function AgendaPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingConsulta, setEditingConsulta] = useState<AgendaEvent | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ date: Date; hour: number } | null>(null);
-  const [selectedDentista, setSelectedDentista] = useState<string>('all');
+  const [selectedProfissional, setSelectedProfissional] = useState<string>('all');
+  const { labelProfissional } = useClinicaConfig();
 
   // Compute view boundaries to fetch correct events dynamically
   const viewStart = useMemo(() => viewMode === 'week' ? startOfWeek(currentDate, { weekStartsOn: 1 }) : currentDate, [currentDate, viewMode]);
@@ -40,21 +42,21 @@ export default function AgendaPage() {
   const { events: consultas, loading, fetchAgenda } = useAgenda(viewStart, viewEnd);
 
   useEffect(() => {
-    if (usuario && isOnlyDentista(usuario.papel)) {
-      setSelectedDentista(usuario.id);
+    if (usuario && isOnlyProfissional(usuario.papel)) {
+      setSelectedProfissional(usuario.id);
     }
   }, [usuario]);
 
-  const dentistas = useMemo(() => usuarios.filter(u => isDentista(u.papel) && u.ativo), [usuarios]);
+  const profissionais = useMemo(() => usuarios.filter(u => isProfissional(u.papel) && u.ativo), [usuarios]);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const displayDays = viewMode === 'week' ? weekDays.slice(0, 6) : [currentDate]; // Mon-Sat or single day
 
   const consultasFiltradas = useMemo(() => {
-    if (selectedDentista === 'all') return consultas;
-    return consultas.filter(c => c.dentista_id === selectedDentista);
-  }, [consultas, selectedDentista]);
+    if (selectedProfissional === 'all') return consultas;
+    return consultas.filter(c => c.dentista_id === selectedProfissional);
+  }, [consultas, selectedProfissional]);
 
   const consultasByDay = useMemo(() => {
     const map = new Map<string, AgendaEvent[]>();
@@ -148,14 +150,14 @@ export default function AgendaPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {!isOnlyDentista(usuario?.papel) && (
-            <Select value={selectedDentista} onValueChange={setSelectedDentista}>
+          {!isOnlyProfissional(usuario?.papel) && (
+            <Select value={selectedProfissional} onValueChange={setSelectedProfissional}>
               <SelectTrigger className="w-[200px] h-9">
-                <SelectValue placeholder="Todos os Profissionais" />
+                <SelectValue placeholder={`Todos os ${labelProfissional}s`} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os Profissionais</SelectItem>
-                {dentistas.map(d => (
+                <SelectItem value="all">Todos os {labelProfissional}s</SelectItem>
+                {profissionais.map(d => (
                   <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>
                 ))}
               </SelectContent>
@@ -317,7 +319,7 @@ export default function AgendaPage() {
         onDelete={handleDelete}
         consulta={editingConsulta}
         selectedSlot={selectedSlot}
-        dentistas={dentistas}
+        profissionais={profissionais}
         pacientes={pacientes}
         usuario={usuario ?? null}
       />

@@ -22,6 +22,7 @@ import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import type { Paciente, Consulta, PlanoTratamento, Receita, ProntuarioEntrada } from '@/types';
 import Odontograma from './Odontograma';
+import { useClinicaConfig } from '@/hooks/useClinicaConfig';
 
 const TIPOS_PRONTUARIO = ['Evolução', 'Anamnese', 'Exame', 'Procedimento', 'Prescrição', 'Observação'] as const;
 const TIPOS_DOCUMENTO = ['Exame', 'Atestado', 'Laudo', 'Contrato', 'Receita', 'Foto', 'Outro'] as const;
@@ -40,6 +41,7 @@ export default function PacienteDetail({ paciente, consultas, planos, receitas, 
   const clinicaNome = usuario?.clinica?.nome || 'MedROI';
   const { entradas, loading: loadingPront, addEntrada, deleteEntrada } = useProntuario(paciente.id);
   const { documentos, loading: loadingDocs, addDocumento, deleteDocumento } = usePacienteDocumentos(paciente.id);
+  const { isOdontologia, labelProfissional, showOdontograma } = useClinicaConfig();
 
   const [prontuarioOpen, setProntuarioOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -204,9 +206,11 @@ export default function PacienteDetail({ paciente, consultas, planos, receitas, 
           <TabsTrigger value="documentos" className="gap-1.5">
             <FileText className="h-4 w-4" /> Documentos
           </TabsTrigger>
-          <TabsTrigger value="odontograma" className="gap-1.5">
-            🦷 Odontograma
-          </TabsTrigger>
+          {showOdontograma && (
+            <TabsTrigger value="odontograma" className="gap-1.5">
+              🦷 Odontograma
+            </TabsTrigger>
+          )}
           <TabsTrigger value="financeiro" className="gap-1.5">
             <DollarSign className="h-4 w-4" /> Financeiro
           </TabsTrigger>
@@ -257,7 +261,7 @@ export default function PacienteDetail({ paciente, consultas, planos, receitas, 
                             <Badge variant="outline" className="text-xs">{e.tipo}</Badge>
                             <span className="text-xs text-muted-foreground">{formatDate(e.data_registro)}</span>
                             {e.dentista && (
-                              <span className="text-xs text-muted-foreground">· Dr(a). {e.dentista.nome}</span>
+                              <span className="text-xs text-muted-foreground">· {isOdontologia ? 'Dr(a). ' : ''}{e.dentista.nome}</span>
                             )}
                           </div>
                           <h4 className="text-sm font-medium mt-1">{e.titulo}</h4>
@@ -294,7 +298,7 @@ export default function PacienteDetail({ paciente, consultas, planos, receitas, 
                   { label: 'Data de Nascimento', value: formatDate(paciente.data_nascimento), icon: Calendar },
                   { label: 'CPF', value: paciente.cpf },
                   { label: 'Sexo', value: paciente.sexo },
-                  { label: 'Dentista', value: paciente.dentista?.nome, icon: Stethoscope },
+                  { label: labelProfissional, value: paciente.dentista ? `${isOdontologia ? 'Dr(a). ' : ''}${paciente.dentista.nome}` : undefined, icon: Stethoscope },
                 ].map((f, i) => f.value ? (
                   <div key={i} className="flex items-center gap-2">
                     {f.icon && <f.icon className="h-4 w-4 text-muted-foreground shrink-0" />}
@@ -335,7 +339,7 @@ export default function PacienteDetail({ paciente, consultas, planos, receitas, 
                       <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{c.tipo_procedimento}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(c.data_hora)} · {c.dentista?.nome || ''}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(c.data_hora)} · {c.dentista ? `${isOdontologia ? 'Dr(a). ' : ''}${c.dentista.nome}` : ''}</p>
                       </div>
                       <Badge variant={c.status === 'Compareceu' ? 'default' : c.status === 'Faltou' ? 'destructive' : 'secondary'} className="text-xs">
                         {c.status}
@@ -398,9 +402,11 @@ export default function PacienteDetail({ paciente, consultas, planos, receitas, 
         </TabsContent>
 
         {/* ══ ODONTOGRAMA ══ */}
-        <TabsContent value="odontograma">
-          <Odontograma pacienteId={paciente.id} />
-        </TabsContent>
+        {showOdontograma && (
+          <TabsContent value="odontograma">
+            <Odontograma pacienteId={paciente.id} />
+          </TabsContent>
+        )}
 
         {/* ══ FINANCEIRO ══ */}
         <TabsContent value="financeiro">
@@ -435,7 +441,7 @@ export default function PacienteDetail({ paciente, consultas, planos, receitas, 
                     <li key={p.id} className="flex items-center justify-between px-4 py-3">
                       <div>
                         <p className="text-sm font-medium">{formatCurrency(p.valor_total)}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(p.created_at)} · Dr(a). {p.dentista?.nome}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(p.created_at)} · {isOdontologia ? 'Dr(a). ' : ''}{p.dentista?.nome}</p>
                       </div>
                       <Badge variant="outline" className="text-xs">{p.status}</Badge>
                     </li>

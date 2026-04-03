@@ -9,13 +9,15 @@ export interface Clinica {
   cor_primaria?: string;
   cor_secundaria?: string;
   dominio?: string;
+  tipo_especialidade?: string;
 }
 
 export interface Usuario {
   id: string;
   nome: string;
   email: string;
-  papel: 'Recepção' | 'Dentista' | 'Gestor' | 'Gestor/Dentista';
+  papel: 'Recepção' | 'Profissional' | 'Gestor' | 'Gestor/Profissional';
+  especialidade?: string | null;
   ativo: boolean;
   clinica_id?: string;
   clinica?: Clinica;
@@ -27,7 +29,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, nome: string, papel?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, nome: string, papel?: string, tipoEspecialidade?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -98,12 +100,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, nome: string, papel: string = 'Recepção') => {
+  const signUp = async (email: string, password: string, nome: string, papel: string = 'Recepção', tipoEspecialidade: string = 'geral') => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { nome, papel } },
+        options: { data: { nome, papel, tipo_especialidade: tipoEspecialidade } },
       });
       return { error };
     } catch (error) {

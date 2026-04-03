@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Consulta, Tarefa } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClinicaConfig } from '@/hooks/useClinicaConfig';
 
 interface ReminderNotificationsProps {
   consultas: Consulta[];
@@ -37,20 +38,23 @@ function buildWhatsAppUrl(phone: string, message: string): string {
   return `https://wa.me/${fullNumber}?text=${encodeURIComponent(message)}`;
 }
 
-function buildReminderMessage(consulta: Consulta, type: '24h' | '1h', clinicaNome: string): string {
+function buildReminderMessage(consulta: Consulta, type: '24h' | '1h', clinicaNome: string, isOdontologia: boolean, labelProfissional: string): string {
   const dataHora = parseISO(consulta.data_hora);
   const dataFormatada = format(dataHora, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   const procedimento = consulta.tipo_procedimento;
-  const dentista = consulta.dentista?.nome || 'seu dentista';
+  const profissional = consulta.dentista?.nome || `seu ${labelProfissional.toLowerCase()}`;
+  const procEmoji = isOdontologia ? '🦷' : '📌';
+  const prefix = isOdontologia ? 'Dr(a). ' : '';
 
   if (type === '24h') {
-    return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! 😊\n\nLembramos que você tem uma consulta agendada para *amanhã*:\n\n📅 ${dataFormatada}\n🦷 ${procedimento}\n👨‍⚕️ Dr(a). ${dentista}\n\nPor favor, confirme sua presença respondendo esta mensagem.\n\n${clinicaNome}`;
+    return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! 😊\n\nLembramos que você tem uma consulta agendada para *amanhã*:\n\n📅 ${dataFormatada}\n${procEmoji} ${procedimento}\n👨‍⚕️ ${prefix}${profissional}\n\nPor favor, confirme sua presença respondendo esta mensagem.\n\n${clinicaNome}`;
   }
-  return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! ⏰\n\nSua consulta é *daqui a 1 hora*:\n\n📅 ${dataFormatada}\n🦷 ${procedimento}\n👨‍⚕️ Dr(a). ${dentista}\n\nEstamos te esperando! 😄\n\n${clinicaNome}`;
+  return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! ⏰\n\nSua consulta é *daqui a 1 hora*:\n\n📅 ${dataFormatada}\n${procEmoji} ${procedimento}\n👨‍⚕️ ${prefix}${profissional}\n\nEstamos te esperando! 😄\n\n${clinicaNome}`;
 }
 
 export default function ReminderNotifications({ consultas, tarefas }: ReminderNotificationsProps) {
   const { usuario } = useAuth();
+  const { isOdontologia, labelProfissional } = useClinicaConfig();
   const clinicaNome = usuario?.clinica?.nome || 'MedROI';
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -203,7 +207,7 @@ export default function ReminderNotifications({ consultas, tarefas }: ReminderNo
                 <div className="p-2 space-y-1.5">
                   {reminders.map(({ consulta, type, hoursUntil, minutesUntil }) => {
                     const phone = consulta.paciente?.whatsapp || consulta.paciente?.telefone || consulta.lead?.telefone;
-                    const message = buildReminderMessage(consulta, type, clinicaNome);
+                    const message = buildReminderMessage(consulta, type, clinicaNome, isOdontologia, labelProfissional);
                     const whatsappUrl = buildWhatsAppUrl(phone!, message);
                     const dataHora = parseISO(consulta.data_hora);
                     const isUrgent = type === '1h';
@@ -348,7 +352,7 @@ export default function ReminderNotifications({ consultas, tarefas }: ReminderNo
                               )}
                               {tarefa.paciente && (
                                 <span className="text-[11px] text-primary font-medium">
-                                  🦷 {tarefa.paciente.nome}
+                                  {isOdontologia ? '🦷' : '👤'} {tarefa.paciente.nome}
                                 </span>
                               )}
                               {tarefa.lead && (

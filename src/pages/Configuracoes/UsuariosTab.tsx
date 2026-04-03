@@ -13,12 +13,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Users, Plus, Pencil, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Usuario } from '@/types';
-
-const PAPEIS = ['Gestor', 'Dentista', 'Gestor/Dentista', 'Recepção'] as const;
+import { useClinicaConfig } from '@/hooks/useClinicaConfig';
+import { isProfissional } from '@/utils/roles';
 
 export default function UsuariosTab() {
   const { usuarios, loading, addUsuario, updateUsuario } = useUsuarios();
   const { usuario } = useAuth();
+  const { isOdontologia, labelProfissional } = useClinicaConfig();
+  
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Usuario | null>(null);
   const [saving, setSaving] = useState(false);
@@ -124,10 +126,14 @@ export default function UsuariosTab() {
     else toast.success(u.ativo ? 'Usuário desativado' : 'Usuário ativado');
   };
 
+  const papeisDisponiveis = isOdontologia 
+    ? ['Gestor', 'Dentista', 'Gestor/Dentista', 'Recepção']
+    : ['Gestor', 'Profissional', 'Gestor/Profissional', 'Recepção'];
+
   const papelColor = (p: string) => {
     if (p === 'Gestor') return 'bg-primary/10 text-primary border-primary/20';
-    if (p === 'Dentista') return 'bg-blue-50 text-blue-700 border-blue-200';
-    if (p === 'Gestor/Dentista') return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    if (p === 'Dentista' || p === 'Profissional') return 'bg-blue-50 text-blue-700 border-blue-200';
+    if (p === 'Gestor/Dentista' || p === 'Gestor/Profissional') return 'bg-indigo-50 text-indigo-700 border-indigo-200';
     return 'bg-amber-50 text-amber-700 border-amber-200';
   };
 
@@ -207,7 +213,7 @@ export default function UsuariosTab() {
               <Select value={form.papel} onValueChange={v => setForm(f => ({ ...f, papel: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {PAPEIS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  {papeisDisponiveis.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -240,7 +246,7 @@ export default function UsuariosTab() {
               </div>
             )}
             
-            {(form.papel === 'Dentista' || form.papel === 'Gestor/Dentista') && editing && (
+            {isProfissional(form.papel) && editing && (
               <div className="space-y-2 pt-2 border-t mt-4">
                 <Label>Integração com Agenda</Label>
                 <div className="flex items-center gap-3 mt-1">
@@ -260,7 +266,7 @@ export default function UsuariosTab() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Permite sincronização bidirecional de consultas usando a conta deste dentista.
+                  Permite sincronização bidirecional de consultas usando a conta deste {labelProfissional.toLowerCase()}.
                 </p>
               </div>
             )}

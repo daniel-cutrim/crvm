@@ -9,6 +9,7 @@ import { buildAppointmentTimestamp, getAppointmentFormValues } from '@/utils/app
 import type { Paciente, Usuario as DBUsuario } from '@/types';
 import type { Usuario as AuthUsuario } from '@/contexts/AuthContext';
 import type { AgendaEvent } from '@/hooks/useAgenda';
+import { useClinicaConfig } from '@/hooks/useClinicaConfig';
 
 const STATUSES = ['Agendada', 'Confirmada', 'Compareceu', 'Faltou', 'Cancelada'] as const;
 const DURATIONS = [15, 30, 45, 60, 90, 120];
@@ -20,17 +21,18 @@ interface Props {
   onDelete: (id: string) => Promise<void>;
   consulta: AgendaEvent | null;
   selectedSlot: { date: Date; hour: number } | null;
-  dentistas: DBUsuario[];
+  profissionais: DBUsuario[];
   pacientes: Paciente[];
   usuario: AuthUsuario | null;
 }
 
 export default function AgendaFormDialog({
   open, onClose, onSave, onDelete,
-  consulta, selectedSlot, dentistas, pacientes, usuario,
+  consulta, selectedSlot, profissionais, pacientes, usuario,
 }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { labelProfissional, isOdontologia } = useClinicaConfig();
 
   const defaultDate = selectedSlot
     ? format(selectedSlot.date, 'yyyy-MM-dd')
@@ -73,7 +75,7 @@ export default function AgendaFormDialog({
       const h = selectedSlot ? String(selectedSlot.hour).padStart(2, '0') + ':00' : '08:00';
       setFormData({
         paciente_id: '',
-        dentista_id: dentistas.length === 1 ? dentistas[0].id : ((usuario?.papel === 'Dentista' || usuario?.papel === 'Gestor/Dentista') ? usuario?.id || '' : ''),
+        dentista_id: profissionais.length === 1 ? profissionais[0].id : ((usuario?.papel === 'Profissional' || usuario?.papel === 'Gestor/Profissional') ? usuario?.id || '' : ''),
         data: d,
         hora: h,
         duracao_minutos: 30,
@@ -151,16 +153,16 @@ export default function AgendaFormDialog({
 
           {/* Dentista */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Dentista *</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">{labelProfissional} *</label>
             <select
               value={formData.dentista_id}
               onChange={e => setFormData(prev => ({ ...prev, dentista_id: e.target.value }))}
               className="dental-input"
               required
             >
-              <option value="">Selecione o dentista</option>
-              {dentistas.map(d => (
-                <option key={d.id} value={d.id}>Dr(a). {d.nome}</option>
+              <option value="">Selecione o {labelProfissional.toLowerCase()}</option>
+              {profissionais.map(d => (
+                <option key={d.id} value={d.id}>{isOdontologia ? 'Dr(a). ' : ''}{d.nome}</option>
               ))}
             </select>
           </div>

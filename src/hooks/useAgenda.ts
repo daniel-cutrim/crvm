@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Consulta } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { isOnlyDentista } from '@/utils/roles';
+import { isOnlyProfissional } from '@/utils/roles';
 
 export interface AgendaEvent extends Partial<Consulta> {
   is_google?: boolean;
@@ -34,8 +34,8 @@ export function useAgenda(startDate: Date, endDate: Date) {
       .lte('data_hora', endDate.toISOString())
       .order('data_hora', { ascending: true });
 
-    // Restrict if ONLY Dentista
-    if (isOnlyDentista(usuario.papel)) {
+    // Restrict if ONLY Profissional
+    if (isOnlyProfissional(usuario.papel)) {
       query = query.eq('dentista_id', usuario.id);
     }
 
@@ -55,7 +55,7 @@ export function useAgenda(startDate: Date, endDate: Date) {
         body: { 
           timeMin: startDate.toISOString(), 
           timeMax: endDate.toISOString(),
-          filter_dentista_id: isOnlyDentista(usuario.papel) ? usuario.id : undefined
+          filter_dentista_id: isOnlyProfissional(usuario.papel) ? usuario.id : undefined
         }
       });
       

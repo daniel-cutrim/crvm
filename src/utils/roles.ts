@@ -4,13 +4,13 @@ export const isGestor = (role?: string | null) => {
   return lowerRole === 'gestor' || lowerRole.includes('gestor');
 };
 
-export const isDentista = (role?: string | null) => {
+export const isProfissional = (role?: string | null) => {
   if (!role) return false;
   const lowerRole = role.toLowerCase();
-  return lowerRole === 'dentista' || lowerRole.includes('dentista');
+  return lowerRole === 'profissional' || lowerRole.includes('profissional');
 };
 
-export const isOnlyDentista = (role?: string | null) => {
+export const isOnlyProfissional = (role?: string | null) => {
   if (!role) return false;
-  return isDentista(role) && !isGestor(role);
+  return isProfissional(role) && !isGestor(role);
 };

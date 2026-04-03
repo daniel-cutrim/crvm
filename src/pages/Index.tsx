@@ -1,6 +1,6 @@
 import { useState, Suspense, lazy, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { isGestor, isOnlyDentista } from '@/utils/roles';
+import { isGestor, isOnlyProfissional } from '@/utils/roles';
 import { useParams, useNavigate } from 'react-router-dom';
 import DentalLayout from '@/components/layout/DentalLayout';
 import Login from '@/pages/Login';
@@ -60,7 +60,7 @@ export default function IndexPage() {
       case 'dashboard': return <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
       case 'pacientes': return <PacientesPage />;
       case 'agenda': return <AgendaPage />;
-      case 'crm': return !isOnlyDentista(papel) ? <CRMPage onNavigate={(p) => handlePageChange(p as Page)} /> : <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
+      case 'crm': return !isOnlyProfissional(papel) ? <CRMPage onNavigate={(p) => handlePageChange(p as Page)} /> : <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
       case 'planos': return <PlanosTratamentoPage />;
       case 'financeiro': return isGestor(papel) ? <FinanceiroPage /> : <Dashboard />;
       case 'marketing': return isGestor(papel) ? <MarketingPage /> : <Dashboard />;

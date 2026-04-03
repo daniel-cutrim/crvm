@@ -4,7 +4,7 @@ import {
   DollarSign, CheckSquare, Settings, LogOut, Menu, X, Megaphone, MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { isGestor, isDentista } from '@/utils/roles';
+import { isGestor, isProfissional } from '@/utils/roles';
 import { useConsultas, useTarefas } from '@/hooks/useData';
 import GlobalSearch from './GlobalSearch';
 import ReminderNotifications from '@/components/notifications/ReminderNotifications';
@@ -16,16 +16,16 @@ interface LayoutProps {
 }
 
 const allMenuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Gestor', 'Dentista', 'Recepção', 'Gestor/Dentista'] },
-  { id: 'pacientes', label: 'Pacientes', icon: Users, roles: ['Gestor', 'Dentista', 'Recepção', 'Gestor/Dentista'] },
-  { id: 'agenda', label: 'Agenda', icon: Calendar, roles: ['Gestor', 'Dentista', 'Recepção', 'Gestor/Dentista'] },
-  { id: 'crm', label: 'CRM / Leads', icon: Target, roles: ['Gestor', 'Recepção', 'Gestor/Dentista'] },
-  { id: 'planos', label: 'Planos de Tratamento', icon: ClipboardList, roles: ['Gestor', 'Dentista', 'Recepção', 'Gestor/Dentista'] },
-  { id: 'financeiro', label: 'Financeiro', icon: DollarSign, roles: ['Gestor', 'Gestor/Dentista'] },
-  { id: 'marketing', label: 'Marketing', icon: Megaphone, roles: ['Gestor', 'Gestor/Dentista'] },
-  { id: 'chat', label: 'Chat WhatsApp', icon: MessageSquare, roles: ['Gestor', 'Recepção', 'Gestor/Dentista'] },
-  { id: 'tarefas', label: 'Tarefas', icon: CheckSquare, roles: ['Gestor', 'Dentista', 'Recepção', 'Gestor/Dentista'] },
-  { id: 'configuracoes', label: 'Configurações', icon: Settings, roles: ['Gestor', 'Gestor/Dentista'] },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
+  { id: 'pacientes', label: 'Pacientes', icon: Users, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
+  { id: 'agenda', label: 'Agenda', icon: Calendar, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
+  { id: 'crm', label: 'CRM / Leads', icon: Target, roles: ['Gestor', 'Recepção', 'Gestor/Profissional'] },
+  { id: 'planos', label: 'Planos de Tratamento', icon: ClipboardList, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
+  { id: 'financeiro', label: 'Financeiro', icon: DollarSign, roles: ['Gestor', 'Gestor/Profissional'] },
+  { id: 'marketing', label: 'Marketing', icon: Megaphone, roles: ['Gestor', 'Gestor/Profissional'] },
+  { id: 'chat', label: 'Chat WhatsApp', icon: MessageSquare, roles: ['Gestor', 'Recepção', 'Gestor/Profissional'] },
+  { id: 'tarefas', label: 'Tarefas', icon: CheckSquare, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
+  { id: 'configuracoes', label: 'Configurações', icon: Settings, roles: ['Gestor', 'Gestor/Profissional'] },
 ];
 
 export default function DentalLayout({ children, currentPage, onPageChange }: LayoutProps) {
@@ -141,7 +141,7 @@ export default function DentalLayout({ children, currentPage, onPageChange }: La
                   {usuario.nome}
                 </p>
                 <p className="text-xs" style={{ color: 'hsl(var(--sidebar-text))' }}>
-                  {usuario.papel}
+                  {usuario.papel === 'Profissional' ? (usuario.especialidade || 'Profissional') : usuario.papel}
                 </p>
               </div>
               <button
