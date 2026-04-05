@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { confirmDialog } from '@/components/ui/confirm-dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Send, MessageSquare, Phone, User, Image, FileText, Mic, MapPin, Sticker, ArrowLeft, Trash2, CheckSquare } from 'lucide-react';
+import { Search, Send, MessageSquare, Phone, User, Image, FileText, Mic, MapPin, Sticker, ArrowLeft, Trash2, CheckSquare, ChevronDown, Wifi, MessageCirclePlus } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import AudioRecorder from '@/components/chat/AudioRecorder';
 import ContactStatusTag from '@/components/chat/ContactStatusTag';
@@ -10,6 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -26,6 +29,7 @@ interface Conversa {
   nao_lidas: number;
   lead_id: string | null;
   paciente_id: string | null;
+  setor_id: string | null;
 }
 
 interface Mensagem {
@@ -40,6 +44,16 @@ interface Mensagem {
   timestamp: string;
   status: string | null;
 }
+
+interface WhatsAppInstance {
+  id: string;
+  instanceName: string;
+  setorId: string;
+  setorNome: string;
+  state: 'open' | 'connecting' | 'close';
+}
+
+type ConnectionState = 'green' | 'yellow' | 'red';
 
 function formatTime(dateStr: string) {
   const date = new Date(dateStr);
@@ -80,6 +94,87 @@ export default function ChatPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const selectionMode = selectedIds.size > 0;
 
+  // WhatsApp instance state
+  const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
+  const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set());
+  const instancePollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // New Chat Dialog State
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const [newChatPhone, setNewChatPhone] = useState('');
+  const [newChatInstanceId, setNewChatInstanceId] = useState<string>('');
+  const [newChatLoading, setNewChatLoading] = useState(false);
+
+  const checkConnectionStatus = useCallback(async (instanceName: string): Promise<ConnectionState> => {
+    try {
+      const { data } = await supabase.functions.invoke('evolution-api-manager', {
+        body: { action: 'check_connection', instanceName }
+      });
+      const state = data?.state;
+      return state === 'open' ? 'green' : state === 'connecting' ? 'yellow' : 'red';
+    } catch {
+      return 'red';
+    }
+  }, []);
+
+  const fetchInstances = useCallback(async () => {
+    const { data } = await supabase
+      .from('integracoes')
+      .select('*, setor:setores(*)')
+      .eq('tipo', 'evolution_api')
+      .eq('ativo', true);
+      
+    if (!data) return;
+
+    const withStatus = await Promise.all(
+      data.map(async (integ) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const instName = (integ.credentials as any)?.instanceName;
+        const state = instName ? await checkConnectionStatus(instName) : 'red';
+        return {
+          id: integ.id,
+          instanceName: instName,
+          setorId: integ.setor_id,
+          setorNome: integ.setor?.nome || 'Geral',
+          state: state === 'green' ? 'open' : state === 'yellow' ? 'connecting' : 'close'
+        } as WhatsAppInstance;
+      })
+    );
+    setInstances(withStatus);
+    
+    // Automatically select all instances on initial load if none selected
+    setSelectedInstanceIds(prev => {
+      if (prev.size === 0 && withStatus.length > 0) {
+        return new Set(withStatus.map(i => i.id));
+      }
+      return prev;
+    });
+  }, [checkConnectionStatus]);
+
+  useEffect(() => {
+    fetchInstances();
+    
+    instancePollingRef.current = setInterval(async () => {
+      setInstances(prev => {
+        prev.forEach(async (integ) => {
+          if (!integ.instanceName) return;
+          const statusResult = await checkConnectionStatus(integ.instanceName);
+          const newState = statusResult === 'green' ? 'open' : statusResult === 'yellow' ? 'connecting' : 'close';
+          setInstances(current => 
+            current.map(i => i.id === integ.id ? { ...i, state: newState } : i)
+          );
+        });
+        return prev;
+      });
+    }, 15000);
+
+    return () => {
+      if (instancePollingRef.current) clearInterval(instancePollingRef.current);
+    };
+  }, [fetchInstances, checkConnectionStatus]);
+
+  const globalStatus = instances.length === 0 ? 'red' : instances.some(i => i.state === 'open') ? 'green' : instances.some(i => i.state === 'connecting') ? 'yellow' : 'red';
+
   function toggleSelect(id: string) {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -113,8 +208,80 @@ export default function ChatPage() {
     loadConversas();
   }
 
+  async function handleCreateChat() {
+    if (!newChatPhone || !newChatInstanceId) {
+      toast.error('Preencha o telefone e escolha o setor/instância');
+      return;
+    }
+    
+    setNewChatLoading(true);
+    try {
+      const instance = instances.find(i => i.id === newChatInstanceId);
+      if (!instance || !instance.instanceName) throw new Error('Instância inválida');
 
-  // Load conversations
+      const { data, error } = await supabase.functions.invoke('evolution-api-manager', {
+         body: { action: 'check_whatsapp', instanceName: instance.instanceName, phone: newChatPhone }
+      });
+
+      if (error) throw error;
+      if (!data?.success || !data?.exists) {
+         toast.error('Este número não possui WhatsApp registrado.');
+         setNewChatLoading(false);
+         return;
+      }
+
+      const wppPhone = data.formattedPhone || newChatPhone.replace(/\D/g, "");
+
+      const { data: existing } = await supabase.from('chat_conversas')
+        .select('*')
+        .eq('phone', wppPhone)
+        .eq('clinica_id', usuario?.clinica_id)
+        .maybeSingle();
+
+      if (existing) {
+         setSelectedConversa(existing);
+      } else {
+         const { data: newConv, error: newErr } = await supabase.from('chat_conversas')
+           .insert({
+              phone: wppPhone,
+              nome: `WhatsApp ${newChatPhone}`,
+              clinica_id: usuario?.clinica_id,
+              setor_id: instance.setorId
+           })
+           .select()
+           .single();
+           
+         if (newErr) throw newErr;
+         setSelectedConversa(newConv);
+         setConversas(prev => [newConv, ...prev]);
+      }
+
+      setNewChatOpen(false);
+      setNewChatPhone('');
+    } catch (err: unknown) {
+      toast.error('Erro ao criar conversa: ' + ((err as Error).message || 'Erro desconhecido'));
+    } finally {
+      setNewChatLoading(false);
+    }
+  }
+
+  async function handleDeleteConversa(conversaId: string) {
+    if (!await confirmDialog({ description: 'Tem certeza que deseja apagar esta conversa e todas as mensagens?' })) return;
+    // Delete messages first, then conversation
+    await supabase.from('chat_mensagens').delete().eq('conversa_id', conversaId);
+    const { error } = await supabase.from('chat_conversas').delete().eq('id', conversaId);
+    if (error) {
+      toast.error('Erro ao apagar conversa');
+      return;
+    }
+    if (selectedConversa?.id === conversaId) {
+      setSelectedConversa(null);
+      setMensagens([]);
+    }
+    toast.success('Conversa apagada');
+    loadConversas();
+  }
+
   useEffect(() => {
     loadConversas();
 
@@ -128,7 +295,6 @@ export default function ChatPage() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Load messages when conversation selected
   useEffect(() => {
     if (!selectedConversa) return;
     loadMensagens(selectedConversa.id);
@@ -150,7 +316,6 @@ export default function ChatPage() {
     return () => { supabase.removeChannel(channel); };
   }, [selectedConversa]);
 
-  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensagens]);
@@ -162,7 +327,6 @@ export default function ChatPage() {
       .order('ultima_mensagem_at', { ascending: false });
     if (data) {
       setConversas(data as Conversa[]);
-      // Load lead data for filtering
       const leadIds = data.filter(c => c.lead_id).map(c => c.lead_id!);
       if (leadIds.length > 0) {
         const { data: leads } = await supabase
@@ -192,23 +356,6 @@ export default function ChatPage() {
     await supabase.from('chat_conversas').update({ nao_lidas: 0 }).eq('id', conversaId);
   }
 
-  async function handleDeleteConversa(conversaId: string) {
-    if (!await confirmDialog({ description: 'Tem certeza que deseja apagar esta conversa e todas as mensagens?' })) return;
-    // Delete messages first, then conversation
-    await supabase.from('chat_mensagens').delete().eq('conversa_id', conversaId);
-    const { error } = await supabase.from('chat_conversas').delete().eq('id', conversaId);
-    if (error) {
-      toast.error('Erro ao apagar conversa');
-      return;
-    }
-    if (selectedConversa?.id === conversaId) {
-      setSelectedConversa(null);
-      setMensagens([]);
-    }
-    toast.success('Conversa apagada');
-    loadConversas();
-  }
-
   async function handleSend() {
     if (!newMessage.trim() || !selectedConversa || sending) return;
     setSending(true);
@@ -221,10 +368,13 @@ export default function ChatPage() {
           conversa_id: selectedConversa.id,
           type: 'text',
           clinica_id: usuario?.clinica_id,
+          setor_id: selectedConversa.setor_id,
         },
       });
 
       if (error) throw error;
+      if (data?.status === 'error' || data?.error) throw new Error(data.error);
+
       setNewMessage('');
     } catch (err: Record<string, unknown>) {
       toast.error('Erro ao enviar mensagem: ' + (err.message || 'Erro desconhecido'));
@@ -238,23 +388,20 @@ export default function ChatPage() {
     setSending(true);
 
     try {
-      // Convert base64 to blob for upload
       const fetchRes = await fetch(base64);
       const blob = await fetchRes.blob();
       const fileName = `audio_${Date.now()}.webm`;
       const filePath = `${selectedConversa.id}/${fileName}`;
 
-      // Upload to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('chat-audio')
         .upload(filePath, blob, { contentType: blob.type });
 
       if (uploadError) throw uploadError;
 
-      // Get signed URL for Evolution API (valid for 1 hour)
       const { data: signData, error: signError } = await supabase.storage
         .from('chat-audio')
-        .createSignedUrl(filePath, 3600); // 1 hour
+        .createSignedUrl(filePath, 3600);
 
       if (signError) throw signError;
 
@@ -265,30 +412,29 @@ export default function ChatPage() {
           type: 'audio',
           audio_url: signData.signedUrl,
           clinica_id: usuario?.clinica_id,
+          setor_id: selectedConversa.setor_id,
         },
       });
 
       if (error) throw error;
-    } catch (err: Record<string, unknown>) {
-      toast.error('Erro ao enviar áudio: ' + (err.message || 'Erro desconhecido'));
+      if (data?.status === 'error' || data?.error) throw new Error(data.error);
+    } catch (err: unknown) {
+      toast.error('Erro ao enviar áudio: ' + ((err as Error).message || 'Erro desconhecido'));
     } finally {
       setSending(false);
     }
   }
 
   const filtered = conversas.filter(c => {
-    // Text search
     const matchesSearch = c.nome.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search);
     if (!matchesSearch) return false;
 
-    // Etapa filter
     if (filters.etapas.length > 0) {
       if (!c.lead_id) return false;
       const lead = leadMap[c.lead_id];
       if (!lead || !filters.etapas.includes(lead.etapa_funil)) return false;
     }
 
-    // Date filter
     if (filters.dataInicio || filters.dataFim) {
       if (!c.lead_id) return false;
       const lead = leadMap[c.lead_id];
@@ -302,6 +448,11 @@ export default function ChatPage() {
       }
     }
 
+    if (c.setor_id) {
+       const hasSelectedInstance = instances.some(i => selectedInstanceIds.has(i.id) && i.setorId === c.setor_id);
+       if (!hasSelectedInstance) return false;
+    }
+
     return true;
   });
 
@@ -309,16 +460,121 @@ export default function ChatPage() {
 
   return (
     <div className="h-[calc(100vh-7rem)] flex rounded-xl border border-border overflow-hidden bg-card">
-      {/* Conversation List */}
       <div className={`w-full md:w-80 lg:w-96 border-r border-border flex flex-col ${selectedConversa ? 'hidden md:flex' : 'flex'}`}>
-        <div className="p-3 border-b border-border">
-          <div className="flex items-center gap-2 mb-3">
-            <MessageSquare size={20} className="text-primary" />
-            <h2 className="font-semibold text-foreground">Chat WhatsApp</h2>
-            {totalNaoLidas > 0 && (
-              <Badge variant="destructive" className="ml-auto text-xs">{totalNaoLidas}</Badge>
-            )}
+        <div className="p-3 border-b border-border space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare size={20} className="text-primary" />
+              <h2 className="font-semibold text-foreground">Chat WhatsApp</h2>
+              <span className="relative flex h-2.5 w-2.5 ml-1">
+                {globalStatus === 'green' && (
+                  <>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+                  </>
+                )}
+                {globalStatus === 'yellow' && (
+                  <span className="animate-pulse relative inline-flex rounded-full h-2.5 w-2.5 bg-yellow-500" />
+                )}
+                {globalStatus === 'red' && (
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                )}
+              </span>
+            </div>
+
+            <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full hover:bg-muted border shadow-sm">
+                   <MessageCirclePlus size={16} className="text-primary" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nova Conversa WhatsApp</DialogTitle>
+                  <DialogDescription>
+                    Digite o número e escolha por qual instância (Setor) deseja enviar a mensagem.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Telefone (DDD + Número)</label>
+                    <Input 
+                      placeholder="Ex: 5511999999999" 
+                      value={newChatPhone} 
+                      onChange={e => setNewChatPhone(e.target.value)} 
+                      type="tel"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Setor / Instância Remetente</label>
+                    <Select value={newChatInstanceId} onValueChange={setNewChatInstanceId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um WhatsApp ativo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {instances.map(i => (
+                          <SelectItem key={i.id} value={i.id} disabled={i.state !== 'open'}>
+                            <div className="flex items-center gap-2">
+                               <div className={`w-2 h-2 rounded-full ${i.state === 'open' ? 'bg-green-500' : 'bg-red-500'}`} />
+                               {i.setorNome || 'Geral'} {i.state !== 'open' ? '(Offline)' : ''}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setNewChatOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleCreateChat} disabled={newChatLoading || !newChatInstanceId}>{newChatLoading ? 'Validando...' : 'Iniciar Conversa'}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 border shadow-sm">
+                  <Wifi size={14} className={globalStatus === 'green' ? 'text-green-500' : globalStatus === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
+                  {selectedInstanceIds.size > 0 ? (
+                    <span className="text-xs">{selectedInstanceIds.size} Filtros</span>
+                  ) : (
+                    <span className="text-xs">Instâncias</span>
+                  )}
+                  <ChevronDown size={14} className="opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-2" align="end">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm px-2">Caixas de WhatsApp</h4>
+                  {instances.length === 0 && (
+                    <p className="text-xs text-muted-foreground px-2 py-2">Nenhum setor conectado.</p>
+                  )}
+                  {instances.map(instance => (
+                    <div 
+                      key={instance.id}
+                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted rounded-md cursor-pointer"
+                      onClick={() => {
+                        setSelectedInstanceIds(prev => {
+                           const next = new Set(prev);
+                           if (next.has(instance.id)) next.delete(instance.id);
+                           else next.add(instance.id);
+                           return next;
+                        });
+                      }}
+                    >
+                      <Checkbox checked={selectedInstanceIds.has(instance.id)} readOnly className="pointer-events-none" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{instance.setorNome}</p>
+                      </div>
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${instance.state === 'open' ? 'bg-green-500' : instance.state === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
+
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input

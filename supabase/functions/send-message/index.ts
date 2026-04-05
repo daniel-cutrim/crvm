@@ -2,11 +2,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 function getCorsHeaders(req: Request): Record<string, string> {
-  const allowedOrigin = Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
-  const origin = req.headers.get("origin") || "";
-  const effectiveOrigin = origin === allowedOrigin ? allowedOrigin : allowedOrigin;
+  const origin = req.headers.get("origin") || "*";
   return {
-    "Access-Control-Allow-Origin": effectiveOrigin,
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
@@ -23,8 +21,8 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+      return new Response(JSON.stringify({ status: "error", error: "Unauthorized: Missing header" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -37,8 +35,8 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+      return new Response(JSON.stringify({ status: "error", error: "Unauthorized: Invalid JWT" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -47,28 +45,32 @@ Deno.serve(async (req) => {
     const { phone, message, conversa_id, type = "text", audio_url, clinica_id, setor_id } = body;
 
     if (!phone) {
-      return new Response(JSON.stringify({ error: "phone is required" }), {
-        status: 400,
+      console.warn("Missing phone parameter");
+      return new Response(JSON.stringify({ status: "error", error: "phone is required" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (!clinica_id) {
-      return new Response(JSON.stringify({ error: "clinica_id is required for multi-tenant" }), {
-        status: 400,
+      console.warn("Missing clinica_id parameter");
+      return new Response(JSON.stringify({ status: "error", error: "clinica_id is required for multi-tenant" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (type === "text" && !message) {
-      return new Response(JSON.stringify({ error: "message is required for text" }), {
-        status: 400,
+      console.warn("Missing message text for text type");
+      return new Response(JSON.stringify({ status: "error", error: "message is required for text" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (type === "audio" && !audio_url) {
-      return new Response(JSON.stringify({ error: "audio_url is required for audio" }), {
-        status: 400,
+      console.warn("Missing audio_url for audio type");
+      return new Response(JSON.stringify({ status: "error", error: "audio_url is required for audio" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -86,8 +88,9 @@ Deno.serve(async (req) => {
       .single();
 
     if (!userRecord || userRecord.clinica_id !== clinica_id) {
-      return new Response(JSON.stringify({ error: "Forbidden: clinica_id mismatch" }), {
-        status: 403,
+      console.warn("IDOR Block - Mismatched Clinica_ID:", clinica_id);
+      return new Response(JSON.stringify({ status: "error", error: "Acesso negado: clínica inválida" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -107,8 +110,9 @@ Deno.serve(async (req) => {
     const { data: integracao } = await integracaoQuery.limit(1).maybeSingle();
 
     if (!integracao || !integracao.credentials) {
-      return new Response(JSON.stringify({ error: "Integração Evolution API não configurada ou inativa para esta clínica/setor" }), {
-        status: 400,
+      console.warn(`Integration not found for Clinica: ${clinica_id}, Setor: ${setor_id}`);
+      return new Response(JSON.stringify({ status: "error", error: "O WhatsApp deste setor/clínica não está conectado." }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -117,8 +121,9 @@ Deno.serve(async (req) => {
     const instanceName = creds.instanceName;
 
     if (!instanceName) {
-      return new Response(JSON.stringify({ error: "Evolution API credentials incomplete" }), {
-        status: 500,
+      console.warn("instanceName missing in credentials", creds);
+      return new Response(JSON.stringify({ status: "error", error: "Credenciais de WhatsApp incompletas no banco de dados." }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -127,8 +132,8 @@ Deno.serve(async (req) => {
     const GLOBAL_KEY = Deno.env.get("EVOLUTION_GLOBAL_KEY");
 
     if (!API_URL || !GLOBAL_KEY) {
-      return new Response(JSON.stringify({ error: "Evolution API server not configured" }), {
-        status: 500,
+      return new Response(JSON.stringify({ status: "error", error: "Evolution API server not configured" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -143,13 +148,17 @@ Deno.serve(async (req) => {
       evoUrl = `${API_URL}/message/sendWhatsAppAudio/${instanceName}`;
       evoBody = {
         number: evoPhone,
-        audioMessage: { audio: audio_url },
+        audio: audio_url,
+        options: { delay: 1200, presence: "composing", encoding: true }
       };
     } else {
       evoUrl = `${API_URL}/message/sendText/${instanceName}`;
       evoBody = {
         number: evoPhone,
-        textMessage: { text: message },
+        text: message,
+        delay: 1200,
+        presence: "composing",
+        linkPreview: false
       };
     }
 
@@ -166,8 +175,8 @@ Deno.serve(async (req) => {
     console.log("Evolution API send response:", JSON.stringify(evoData));
 
     if (!evoRes.ok) {
-      return new Response(JSON.stringify({ error: "Failed to send message", details: evoData }), {
-        status: 502,
+      return new Response(JSON.stringify({ status: "error", error: "Failed to send message: " + (evoData?.response?.message?.[0] || evoData?.message || "Serviço Inativo") }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -245,8 +254,8 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ status: "error", error: String(err) || "Internal server error" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

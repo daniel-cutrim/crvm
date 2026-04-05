@@ -12,7 +12,10 @@ async function sendEvolutionMessage(apiUrl: string, apiKey: string, instanceName
     headers: { "Content-Type": "application/json", "apikey": apiKey },
     body: JSON.stringify({
       number: phone,
-      textMessage: { text: message },
+      text: message,
+      delay: 1500,
+      presence: "composing",
+      linkPreview: false
     }),
   });
   return res.json();

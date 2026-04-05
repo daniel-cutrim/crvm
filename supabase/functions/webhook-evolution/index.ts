@@ -26,7 +26,7 @@ serve(async (req) => {
     const { data: integracao, error: integracaoError } = await supabaseClient
       .from('integracoes')
       .select('clinica_id, setor_id')
-      .eq('tipo', 'evolution-api')
+      .eq('tipo', 'evolution_api')
       .filter('credentials->>instanceName', 'eq', payload.instance)
       .single();
 
@@ -92,18 +92,46 @@ serve(async (req) => {
       lead = newLead;
     }
 
-    // 2. Save Message to chat_conversas
-    if (lead) {
-      await supabaseClient.from('chat_conversas').insert({
+    // 2. Find or create Conversa
+    let { data: conversa } = await supabaseClient
+      .from('chat_conversas')
+      .select('id')
+      .eq('clinica_id', clinica_id)
+      .eq('phone', phone)
+      .maybeSingle();
+
+    if (!conversa) {
+      const { data: newConversa } = await supabaseClient
+        .from('chat_conversas')
+        .insert({
+          clinica_id,
+          setor_id,
+          phone: phone,
+          nome: pushName,
+          lead_id: lead ? lead.id : null
+        })
+        .select('id')
+        .single();
+      conversa = newConversa;
+    }
+
+    if (conversa) {
+      // 3. Save Message to chat_mensagens
+      await supabaseClient.from('chat_mensagens').insert({
         clinica_id,
-        setor_id, // Inherit sector ownership
-        lead_id: lead.id,
-        contato_telefone: phone,
-        canal: 'WhatsApp',
-        direcao: 'recebida',
+        conversa_id: conversa.id,
+        message_id: msgData.key.id || null,
+        from_me: false,
+        tipo: 'text',
         conteudo: t,
-        status: 'entregue'
+        status: 'delivered'
       });
+
+      // 4. Update ultima_mensagem in chat_conversas
+      await supabaseClient.from('chat_conversas').update({
+        ultima_mensagem: t,
+        ultima_mensagem_at: new Date().toISOString()
+      }).eq('id', conversa.id);
       
       // Also log it via system_logs for QA/Audit
       await supabaseClient.from('system_logs').insert({
