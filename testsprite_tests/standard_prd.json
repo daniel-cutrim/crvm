@@ -94,11 +94,11 @@
     },
     {
       "name": "WhatsApp Chat",
-      "description": "WhatsApp messaging interface integrated via the Evolution API for conversations, media and audio messaging tied to leads/patients.",
+      "description": "WhatsApp messaging interface integrated via the Uzapi for conversations, media and audio messaging tied to leads/patients.",
       "user_flows": [
         "Navigate to / -> Open chat module -> View conversation list with unread counts -> Search conversations by name or phone -> Select conversation to view messages -> Type and send text message -> See message appear in conversation",
         "Navigate to / -> Open chat module -> Record and send audio message -> See audio message appear and playable in conversation",
-        "Navigate to / -> Open chat module -> Attempt to send message when Evolution API integration is not configured -> See integration error or send failure indicator"
+        "Navigate to / -> Open chat module -> Attempt to send message when Uzapi integration is not configured -> See integration error or send failure indicator"
       ]
     },
     {
@@ -435,7 +435,7 @@
       },
       {
         "name": "WhatsApp Chat",
-        "description": "WhatsApp messaging interface via Evolution API",
+        "description": "WhatsApp messaging interface via Uzapi",
         "files": [
           "src/pages/Chat/index.tsx",
           "src/components/chat/AudioRecorder.tsx"
@@ -478,7 +478,7 @@
         "user_interactions": [
           "Edit clinic information (name, logo, colors, address)",
           "Manage users (add, edit roles, deactivate)",
-          "Configure WhatsApp integration (Evolution API)",
+          "Configure WhatsApp integration (Uzapi)",
           "Configure notification settings",
           "Manage custom funnels and stages"
         ],
@@ -549,9 +549,9 @@
         "impact": "Users could potentially access restricted modules by manipulating state, though RLS on Supabase provides data-level security"
       },
       {
-        "issue": "WhatsApp chat requires active Evolution API instance configured per clinic sector",
+        "issue": "WhatsApp chat requires active Uzapi instance configured per clinic sector",
         "location": "src/pages/Chat/index.tsx",
-        "impact": "Chat features will not work without properly configured Evolution API integration"
+        "impact": "Chat features will not work without properly configured Uzapi integration"
       }
     ]
   }

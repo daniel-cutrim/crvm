@@ -9,8 +9,8 @@
 ## Índice
 
 1. [webhook-lead](#1-webhook-lead) — Captação de leads via landing pages
-2. [webhook-evolution](#2-webhook-evolution) — Recebimento de mensagens WhatsApp (Evolution API)
-3. [evolution-api-manager](#3-evolution-api-manager) — Gerenciamento de instâncias WhatsApp
+2. [webhook-uzapi](#2-webhook-uzapi) — Recebimento de mensagens WhatsApp (Uzapi)
+3. [uzapi-manager](#3-uzapi-manager) — Gerenciamento de instâncias WhatsApp
 4. [send-message](#4-send-message) — Envio de mensagens WhatsApp
 5. [send-lead-followup](#5-send-lead-followup) — Follow-up automático de leads inativos
 6. [send-appointment-reminders](#6-send-appointment-reminders) — Lembretes automáticos de consultas
@@ -133,21 +133,21 @@ curl -X POST \
 
 ---
 
-## 2. webhook-evolution
+## 2. webhook-uzapi
 
-Webhook que recebe mensagens do WhatsApp via Evolution API. Registrado automaticamente ao criar uma instância.
+Webhook que recebe mensagens do WhatsApp via Uzapi. Registrado automaticamente ao criar uma instância.
 
 ### Endpoint
 
 ```
-POST /functions/v1/webhook-evolution
+POST /functions/v1/webhook-uzapi
 ```
 
 ### Autenticação
 
-Nenhuma (chamado diretamente pela Evolution API). A autenticação é feita pela validação do `instanceName` na tabela `integracoes`.
+Nenhuma (chamado diretamente pela Uzapi). A autenticação é feita pela validação do `instanceName` na tabela `integracoes`.
 
-### Request Body (enviado pela Evolution API)
+### Request Body (enviado pela Uzapi)
 
 ```json
 {
@@ -194,14 +194,14 @@ Nenhuma (chamado diretamente pela Evolution API). A autenticação é feita pela
 
 ---
 
-## 3. evolution-api-manager
+## 3. uzapi-manager
 
-Gerencia instâncias da Evolution API (criar, QR Code, status, logout). Apenas para admins autenticados.
+Gerencia instâncias da Uzapi (criar, QR Code, status, logout). Apenas para admins autenticados.
 
 ### Endpoint
 
 ```
-POST /functions/v1/evolution-api-manager
+POST /functions/v1/uzapi-manager
 ```
 
 ### Autenticação
@@ -229,7 +229,7 @@ POST /functions/v1/evolution-api-manager
     "id": "uuid",
     "clinica_id": "uuid",
     "setor_id": "uuid",
-    "tipo": "evolution_api",
+    "tipo": "uzapi",
     "credentials": {
       "instanceName": "inst_clinica_setor_17112345",
       "token": "inst_clinica_setor_17112345",
@@ -292,14 +292,14 @@ POST /functions/v1/evolution-api-manager
 
 ### Secrets necessários (Supabase)
 
-- `EVOLUTION_API_URL` — URL do servidor Evolution
-- `EVOLUTION_GLOBAL_KEY` — Chave global da API
+- `UZAPI_BASE_URL` — URL do servidor Uzapi
+- `UZAPI_USERNAME` — Chave global da API
 
 ---
 
 ## 4. send-message
 
-Envia mensagens de texto ou áudio via WhatsApp (Evolution API). Requer autenticação de usuário.
+Envia mensagens de texto ou áudio via WhatsApp (Uzapi). Requer autenticação de usuário.
 
 ### Endpoint
 
@@ -362,7 +362,7 @@ POST /functions/v1/send-message
 **400 — Integração não configurada**
 ```json
 {
-  "error": "Integração Evolution API não configurada ou inativa para esta clínica/setor"
+  "error": "Integração Uzapi não configurada ou inativa para esta clínica/setor"
 }
 ```
 
@@ -587,8 +587,8 @@ POST /functions/v1/google-calendar-sync
 | Rota | Tipo | Header |
 |---|---|---|
 | `webhook-lead` | API Key | `x-api-key: {chave}` |
-| `webhook-evolution` | Nenhuma | Validação por instanceName |
-| `evolution-api-manager` | JWT | `Authorization: Bearer {token}` |
+| `webhook-uzapi` | Nenhuma | Validação por instanceName |
+| `uzapi-manager` | JWT | `Authorization: Bearer {token}` |
 | `send-message` | JWT | `Authorization: Bearer {token}` |
 | `send-lead-followup` | CRON/Service | Service Role Key |
 | `send-appointment-reminders` | CRON/Service | Service Role Key |
@@ -601,11 +601,11 @@ POST /functions/v1/google-calendar-sync
 
 | Secret | Usado por | Descrição |
 |---|---|---|
-| `EVOLUTION_API_URL` | evolution-api-manager, send-message, send-lead-followup, send-appointment-reminders | URL do servidor Evolution API |
-| `EVOLUTION_GLOBAL_KEY` | evolution-api-manager, send-message, send-lead-followup, send-appointment-reminders | Chave global da Evolution |
+| `UZAPI_BASE_URL` | uzapi-manager, send-message, send-lead-followup, send-appointment-reminders | URL do servidor Uzapi |
+| `UZAPI_USERNAME` | uzapi-manager, send-message, send-lead-followup, send-appointment-reminders | Chave global da Uzapi |
 | `GOOGLE_CLIENT_ID` | google-calendar-auth | Client ID do Google Cloud |
 | `GOOGLE_CLIENT_SECRET` | google-calendar-auth | Client Secret do Google Cloud |
-| `FRONTEND_URL` | google-calendar-auth, evolution-api-manager, send-message | URL do front-end para redirecionamentos |
+| `FRONTEND_URL` | google-calendar-auth, uzapi-manager, send-message | URL do front-end para redirecionamentos |
 | `WEBHOOK_LEAD_API_KEY` | webhook-lead | Chave de API para validar webhooks de landing pages |
 
 ---
@@ -614,5 +614,5 @@ POST /functions/v1/google-calendar-sync
 
 | Função | Motivo |
 |---|---|
-| `webhook-zapi` | Substituída por `webhook-evolution` |
-| `send-zapi-message` | Substituída por `send-message` (Evolution API) |
+| `webhook-zapi` | Substituída por `webhook-uzapi` |
+| `send-zapi-message` | Substituída por `send-message` (Uzapi) |

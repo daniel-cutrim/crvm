@@ -17,7 +17,7 @@ export default function IntegracoesTab() {
   return (
     <div className="space-y-6">
       
-      {/* WhatsApp / Evolution API Management */}
+      {/* WhatsApp / UZAPI Management */}
       <WhatsAppManager />
 
       {/* Variáveis da Clínica para Integrações */}

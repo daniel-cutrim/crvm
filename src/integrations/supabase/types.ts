@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      _webhook_debug: {
+        Row: {
+          created_at: string | null
+          decision: string | null
+          id: string
+          parsed: Json | null
+          raw_payload: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          decision?: string | null
+          id?: string
+          parsed?: Json | null
+          raw_payload?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          decision?: string | null
+          id?: string
+          parsed?: Json | null
+          raw_payload?: Json | null
+        }
+        Relationships: []
+      }
+      auth_google_agenda: {
+        Row: {
+          access_token: string
+          clinica_id: string | null
+          created_at: string | null
+          expiry_date: string | null
+          id: string
+          refresh_token: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          clinica_id?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          refresh_token?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          clinica_id?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          refresh_token?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_google_agenda_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinica"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automacao_mensagens: {
         Row: {
           clinica_id: string | null
@@ -66,14 +131,29 @@ export type Database = {
           chat_lid: string | null
           clinica_id: string | null
           created_at: string | null
+          crm_etapa_funil: string | null
+          crm_interesse: string | null
+          crm_nome: string | null
+          crm_objecoes: string | null
+          crm_preferencia_horario: string | null
+          crm_preferencia_modalidade: string | null
+          crm_problemas_identificados: string | null
+          crm_resumo_geral: string | null
+          crm_telefone: string | null
+          crm_urgencia: string | null
+          extraction_pending: boolean | null
           foto_url: string | null
           id: string
+          instance_id: string | null
           lead_id: string | null
           nao_lidas: number | null
           nome: string
           paciente_id: string | null
           phone: string
           setor_id: string | null
+          supervisor_enabled: boolean | null
+          supervisor_guidance: string | null
+          supervisor_guidance_at: string | null
           ultima_mensagem: string | null
           ultima_mensagem_at: string | null
         }
@@ -81,14 +161,29 @@ export type Database = {
           chat_lid?: string | null
           clinica_id?: string | null
           created_at?: string | null
+          crm_etapa_funil?: string | null
+          crm_interesse?: string | null
+          crm_nome?: string | null
+          crm_objecoes?: string | null
+          crm_preferencia_horario?: string | null
+          crm_preferencia_modalidade?: string | null
+          crm_problemas_identificados?: string | null
+          crm_resumo_geral?: string | null
+          crm_telefone?: string | null
+          crm_urgencia?: string | null
+          extraction_pending?: boolean | null
           foto_url?: string | null
           id?: string
+          instance_id?: string | null
           lead_id?: string | null
           nao_lidas?: number | null
           nome: string
           paciente_id?: string | null
           phone: string
           setor_id?: string | null
+          supervisor_enabled?: boolean | null
+          supervisor_guidance?: string | null
+          supervisor_guidance_at?: string | null
           ultima_mensagem?: string | null
           ultima_mensagem_at?: string | null
         }
@@ -96,14 +191,29 @@ export type Database = {
           chat_lid?: string | null
           clinica_id?: string | null
           created_at?: string | null
+          crm_etapa_funil?: string | null
+          crm_interesse?: string | null
+          crm_nome?: string | null
+          crm_objecoes?: string | null
+          crm_preferencia_horario?: string | null
+          crm_preferencia_modalidade?: string | null
+          crm_problemas_identificados?: string | null
+          crm_resumo_geral?: string | null
+          crm_telefone?: string | null
+          crm_urgencia?: string | null
+          extraction_pending?: boolean | null
           foto_url?: string | null
           id?: string
+          instance_id?: string | null
           lead_id?: string | null
           nao_lidas?: number | null
           nome?: string
           paciente_id?: string | null
           phone?: string
           setor_id?: string | null
+          supervisor_enabled?: boolean | null
+          supervisor_guidance?: string | null
+          supervisor_guidance_at?: string | null
           ultima_mensagem?: string | null
           ultima_mensagem_at?: string | null
         }
@@ -152,6 +262,7 @@ export type Database = {
           status: string | null
           timestamp: string
           tipo: string
+          zapi_moment: number | null
         }
         Insert: {
           clinica_id?: string | null
@@ -166,6 +277,7 @@ export type Database = {
           status?: string | null
           timestamp?: string
           tipo?: string
+          zapi_moment?: number | null
         }
         Update: {
           clinica_id?: string | null
@@ -180,6 +292,7 @@ export type Database = {
           status?: string | null
           timestamp?: string
           tipo?: string
+          zapi_moment?: number | null
         }
         Relationships: [
           {
@@ -194,6 +307,44 @@ export type Database = {
             columns: ["conversa_id"]
             isOneToOne: false
             referencedRelation: "chat_conversas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_modelos_mensagem: {
+        Row: {
+          atalho: string | null
+          categoria: string | null
+          clinica_id: string | null
+          conteudo: string
+          created_at: string | null
+          id: string
+          titulo: string
+        }
+        Insert: {
+          atalho?: string | null
+          categoria?: string | null
+          clinica_id?: string | null
+          conteudo: string
+          created_at?: string | null
+          id?: string
+          titulo: string
+        }
+        Update: {
+          atalho?: string | null
+          categoria?: string | null
+          clinica_id?: string | null
+          conteudo?: string
+          created_at?: string | null
+          id?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_modelos_mensagem_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinica"
             referencedColumns: ["id"]
           },
         ]
@@ -247,6 +398,7 @@ export type Database = {
           data_hora: string
           dentista_id: string
           duracao_minutos: number
+          google_event_id: string | null
           id: string
           lead_id: string | null
           observacoes: string | null
@@ -261,6 +413,7 @@ export type Database = {
           data_hora: string
           dentista_id: string
           duracao_minutos?: number
+          google_event_id?: string | null
           id?: string
           lead_id?: string | null
           observacoes?: string | null
@@ -275,6 +428,7 @@ export type Database = {
           data_hora?: string
           dentista_id?: string
           duracao_minutos?: number
+          google_event_id?: string | null
           id?: string
           lead_id?: string | null
           observacoes?: string | null
@@ -1725,4 +1879,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

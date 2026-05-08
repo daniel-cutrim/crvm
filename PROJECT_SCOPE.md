@@ -15,7 +15,7 @@ A aplicação utiliza arquitetura multi-tenant onde cada clínica (`clinica_id`)
 | **Front-end** | React 18 + TypeScript + Vite |
 | **UI Components** | shadcn/ui + Radix UI + Tailwind CSS |
 | **Back-end/BaaS** | Supabase (PostgreSQL + Auth + Edge Functions + Storage) |
-| **WhatsApp API** | Evolution API (self-hosted) |
+| **WhatsApp API** | Uzapi (self-hosted) |
 | **Agenda externa** | Google Calendar API (OAuth 2.0) |
 | **Gráficos** | Recharts |
 
@@ -100,7 +100,7 @@ O menu lateral à esquerda contém os seguintes itens de navegação:
   - Sheet lateral de detalhamento do lead com histórico de jornada, timeline de interações e botão de conversão para Paciente.
 
 ### 5. Chat WhatsApp
-- **Descrição**: Interface de chat em tempo real integrada com WhatsApp via Evolution API.
+- **Descrição**: Interface de chat em tempo real integrada com WhatsApp via Uzapi.
 - **Funcionalidades**:
   - Lista de conversas na lateral esquerda, ordenadas por última mensagem.
   - Visualização de mensagens na área principal (balões de chat estilizados).
@@ -145,7 +145,7 @@ O menu lateral à esquerda contém os seguintes itens de navegação:
   - **Funis**: Criação e edição de funis do CRM (nome do funil + etapas ordenáveis com nome e cor).
   - **Procedimentos**: Tabela de procedimentos com código, nome e valor padrão.
   - **Integrações**: 
-    - WhatsApp (Evolution API): Gerenciamento de instâncias por setor. Botão para criar nova instância, exibição de QR Code para conexão, indicador de status (conectado/desconectado).
+    - WhatsApp (Uzapi): Gerenciamento de instâncias por setor. Botão para criar nova instância, exibição de QR Code para conexão, indicador de status (conectado/desconectado).
     - Google Calendar: Botão para conectar conta Google via OAuth.
 
 ---
@@ -157,8 +157,8 @@ O sistema possui 8 Edge Functions ativas no Supabase:
 | Endpoint | Método | Descrição |
 |---|---|---|
 | `/functions/v1/webhook-lead` | POST | Captação de leads via landing pages externas |
-| `/functions/v1/webhook-evolution` | POST | Recepção de mensagens WhatsApp (Evolution API) |
-| `/functions/v1/evolution-api-manager` | POST | Gerenciamento de instâncias WhatsApp (criar, QR, status, logout) |
+| `/functions/v1/webhook-uzapi` | POST | Recepção de mensagens WhatsApp (Uzapi) |
+| `/functions/v1/uzapi-manager` | POST | Gerenciamento de instâncias WhatsApp (criar, QR, status, logout) |
 | `/functions/v1/send-message` | POST | Envio de mensagens WhatsApp (texto/áudio) |
 | `/functions/v1/send-lead-followup` | POST | Automação de follow-up de leads inativos (24h) |
 | `/functions/v1/send-appointment-reminders` | POST | Lembrete automático de consultas (1h e 24h antes) |
@@ -188,7 +188,7 @@ O sistema possui 8 Edge Functions ativas no Supabase:
 | `despesas` | Registros financeiros de saída |
 | `chat_conversas` | Conversas do WhatsApp |
 | `chat_mensagens` | Mensagens individuais do chat |
-| `integracoes` | Configurações de integrações externas (Evolution API por setor) |
+| `integracoes` | Configurações de integrações externas (Uzapi por setor) |
 | `tarefas` | Tarefas internas da equipe |
 | `system_logs` | Logs de auditoria e rastreamento |
 | `automacao_mensagens` | Controle de mensagens automáticas enviadas |
@@ -208,8 +208,8 @@ FRONTEND_URL=http://localhost:5173
 
 ### Secrets do Supabase (Edge Functions)
 ```
-EVOLUTION_API_URL=http://ip:8080
-EVOLUTION_GLOBAL_KEY=chave
+UZAPI_BASE_URL=http://ip:8080
+UZAPI_USERNAME=chave
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=xxx
 WEBHOOK_LEAD_API_KEY=chave-para-landing-pages

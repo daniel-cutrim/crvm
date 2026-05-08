@@ -7,7 +7,7 @@
 
 ## 📋 Escopo do Produto Analisado
 
-O CRM Odonto é uma plataforma SaaS multi-tenant composta por **10 módulos principais**, **8 Edge Functions** no backend (Supabase), **~22 tabelas** no banco de dados com RLS multi-tenant, e integrações externas com **Evolution API (WhatsApp)** e **Google Calendar**.
+O CRM Odonto é uma plataforma SaaS multi-tenant composta por **10 módulos principais**, **8 Edge Functions** no backend (Supabase), **~22 tabelas** no banco de dados com RLS multi-tenant, e integrações externas com **Uzapi (WhatsApp)** e **Google Calendar**.
 
 ### Módulos do Frontend
 | # | Módulo | Página Principal | Papéis com Acesso |
@@ -27,8 +27,8 @@ O CRM Odonto é uma plataforma SaaS multi-tenant composta por **10 módulos prin
 | # | Função | Tipo |
 |---|--------|------|
 | 1 | `webhook-lead` | API Key — Captação de leads |
-| 2 | `webhook-evolution` | Webhook — Recebimento WhatsApp |
-| 3 | `evolution-api-manager` | JWT — Gerenciamento instâncias |
+| 2 | `webhook-uzapi` | Webhook — Recebimento WhatsApp |
+| 3 | `uzapi-manager` | JWT — Gerenciamento instâncias |
 | 4 | `send-message` | JWT — Envio WhatsApp |
 | 5 | `send-lead-followup` | CRON — Follow-up automático |
 | 6 | `send-appointment-reminders` | CRON — Lembretes de consulta |
@@ -112,9 +112,9 @@ P7 — CONFORMIDADE & GO-TO-MARKET
 | P0.4.2 | `webhook-lead` com API Key errada | cURL/API | API Key inválida | 401 Unauthorized |
 | P0.4.3 | `send-message` sem JWT | cURL/API | POST sem Authorization header | 401 |
 | P0.4.4 | `send-message` com clinica_id de outra clínica (IDOR) | cURL/API | Enviar `clinica_id` pertencente a outra clínica | 403 Forbidden: clinica_id mismatch |
-| P0.4.5 | `evolution-api-manager` sem JWT | cURL/API | Chamar sem token | 401 |
+| P0.4.5 | `uzapi-manager` sem JWT | cURL/API | Chamar sem token | 401 |
 | P0.4.6 | `webhook-lead` sanitiza XSS | cURL/API | Enviar `<script>alert(1)</script>` no campo `nome` | Tag HTML removida |
-| P0.4.7 | `webhook-evolution` com instância desconhecida | cURL/API | Enviar evento com `instance` inexistente | 404 "Instance unmanaged" |
+| P0.4.7 | `webhook-uzapi` com instância desconhecida | cURL/API | Enviar evento com `instance` inexistente | 404 "Instance unmanaged" |
 
 ---
 
@@ -250,7 +250,7 @@ P7 — CONFORMIDADE & GO-TO-MARKET
 |---|--------------|------|--------------------|
 | P2.8.1 | Lista de conversas carrega | E2E | Conversas ordenadas por `ultima_mensagem_at` |
 | P2.8.2 | Selecionar conversa exibe mensagens | E2E | Histórico de mensagens renderizado |
-| P2.8.3 | Enviar mensagem de texto | E2E | Mensagem salva no DB + enviada via Evolution API |
+| P2.8.3 | Enviar mensagem de texto | E2E | Mensagem salva no DB + enviada via Uzapi |
 | P2.8.4 | Enviar áudio (recorder) | E2E | Upload para `chat-audio` bucket + envio |
 | P2.8.5 | Receber mensagem em tempo real (Realtime) | E2E | Nova mensagem aparece sem refresh |
 | P2.8.6 | Contador de não lidas (`nao_lidas`) | E2E | Badge atualiza ao receber mensagem |
@@ -282,8 +282,8 @@ P7 — CONFORMIDADE & GO-TO-MARKET
 | P2.10.7 | Cadastrar procedimento padrão (nome + valor base) | E2E | Procedimento salvo |
 | P2.10.8 | Ativar/desativar procedimento | E2E | Toggle funcional |
 | P2.10.9 | CRUD de usuários (convidar, editar papel, desativar) | E2E | Funcional para gestor |
-| P2.10.10 | Configurar integrações (Evolution API) | E2E | Credenciais salvas |
-| P2.10.11 | WhatsApp Manager: criar instância | E2E | Instância criada via `evolution-api-manager` |
+| P2.10.10 | Configurar integrações (Uzapi) | E2E | Credenciais salvas |
+| P2.10.11 | WhatsApp Manager: criar instância | E2E | Instância criada via `uzapi-manager` |
 | P2.10.12 | WhatsApp Manager: QR Code | E2E | QR Code exibido para escanear |
 | P2.10.13 | WhatsApp Manager: verificar conexão | E2E | Estado `open`/`close`/`connecting` exibido |
 | P2.10.14 | WhatsApp Manager: logout | E2E | Instância desconectada |
@@ -293,13 +293,13 @@ P7 — CONFORMIDADE & GO-TO-MARKET
 
 ## P3 — 🔌 INTEGRAÇÕES EXTERNAS
 
-### P3.1 — Evolution API (WhatsApp)
+### P3.1 — Uzapi (WhatsApp)
 
 | # | Caso de Teste | Tipo | Resultado Esperado |
 |---|--------------|------|--------------------|
 | P3.1.1 | Criar instância WhatsApp por setor | API/E2E | Instância criada, `instanceName` salvo em `integracoes` |
 | P3.1.2 | Receber mensagem via webhook | cURL | Lead criado (se novo) + mensagem salva em `chat_mensagens` |
-| P3.1.3 | Enviar texto via `send-message` | API/E2E | Mensagem enviada via Evolution, salva no chat |
+| P3.1.3 | Enviar texto via `send-message` | API/E2E | Mensagem enviada via Uzapi, salva no chat |
 | P3.1.4 | Enviar áudio via `send-message` | API/E2E | Áudio enviado, salvo com `tipo = 'audio'` |
 | P3.1.5 | Resolução dinâmica de instância por setor | API | `setor_id` → busca instância correta na tabela `integracoes` |
 | P3.1.6 | Webhook ignora broadcasts e status events | cURL | Retorna `{ "status": "ignored event" }` |
@@ -384,7 +384,7 @@ P7 — CONFORMIDADE & GO-TO-MARKET
 | P6.4 | Upload de arquivo > 50MB | Bloqueio no bucket (file_size_limit: 52428800) |
 | P6.5 | Upload de tipo MIME não permitido (e.g. .exe) | Bucket rejeita |
 | P6.6 | Desconexão de internet durante envio de mensagem | Erro tratado, toast de falha, retry possível |
-| P6.7 | Evolution API offline | Edge function retorna erro claro, UI mostra integração offline |
+| P6.7 | Uzapi offline | Edge function retorna erro claro, UI mostra integração offline |
 | P6.8 | Google Calendar não autenticado (agenda) | Agenda funciona normalmente, sem eventos Google |
 | P6.9 | Deletar paciente que tem conversa no chat | `ON DELETE SET NULL` em `chat_conversas.paciente_id` |
 | P6.10 | Deletar lead que tem consulta | `ON DELETE CASCADE` em `consultas.lead_id` |
@@ -415,7 +415,7 @@ P7 — CONFORMIDADE & GO-TO-MARKET
 | P7.2.2 | Gestor configura dados da clínica | Tab Clínica funcional |
 | P7.2.3 | Gestor cria setores | Setores criados |
 | P7.2.4 | Gestor configura funis personalizados | Funis + etapas criados |
-| P7.2.5 | Gestor configura integração WhatsApp | Instância Evolution criada + QR code |
+| P7.2.5 | Gestor configura integração WhatsApp | Instância Uzapi criada + QR code |
 | P7.2.6 | Gestor convida Dentistas e Recepção | Signup com papel definido |
 | P7.2.7 | Fluxo completo: lead entra → agendamento → consulta → plano → pagamento | Teste end-to-end da jornada completa |
 
@@ -445,7 +445,7 @@ P7 — CONFORMIDADE & GO-TO-MARKET
 
 ### Fase 3: Integrações Externas (P3)
 **Duração estimada:** 2–3 dias
-- Testar Evolution API com instância de homologação
+- Testar Uzapi com instância de homologação
 - Testar Google Calendar OAuth com conta de teste
 - Testar CRONs manualmente invocando as funções
 

@@ -267,49 +267,50 @@ Deno.serve(async (req) => {
         .eq("id", existingConv.id);
     }
 
-    // Send welcome WhatsApp message via Evolution API
+    // Send welcome WhatsApp message via UZAPI
     try {
-      const API_URL = Deno.env.get("EVOLUTION_API_URL");
-      const GLOBAL_KEY = Deno.env.get("EVOLUTION_GLOBAL_KEY");
+      const UZAPI_BASE_URL = Deno.env.get("UZAPI_BASE_URL");
+      const UZAPI_USERNAME = Deno.env.get("UZAPI_USERNAME");
 
-      if (API_URL && GLOBAL_KEY) {
-        // Find active Evolution instance for this clinica
+      if (UZAPI_BASE_URL && UZAPI_USERNAME) {
         const { data: integracao } = await supabase
           .from("integracoes")
           .select("credentials")
           .eq("clinica_id", clinica_id)
-          .eq("tipo", "evolution_api")
+          .eq("tipo", "uzapi")
           .eq("ativo", true)
           .limit(1)
           .maybeSingle();
 
         if (integracao && integracao.credentials) {
-          const creds = integracao.credentials as { instanceName?: string };
+          const creds = integracao.credentials as { phoneNumberId?: string; token?: string };
 
-          if (creds.instanceName) {
+          if (creds.phoneNumberId && creds.token) {
             const welcomeMessage = `Olá ${nome}! 👋\nRecebemos seu contato. Em breve nossa equipe vai te atender!\nObrigado pelo interesse! 😊`;
 
-            const evoRes = await fetch(
-              `${API_URL}/message/sendText/${creds.instanceName}`,
+            const uzRes = await fetch(
+              `${UZAPI_BASE_URL}/${UZAPI_USERNAME}/v1/${creds.phoneNumberId}/messages`,
               {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "apikey": GLOBAL_KEY,
+                  "Authorization": `Bearer ${creds.token}`,
                 },
                 body: JSON.stringify({
-                  number: whatsappPhone,
-                  textMessage: { text: welcomeMessage },
+                  to: whatsappPhone,
+                  type: "text",
+                  text: { body: welcomeMessage },
+                  delayMessage: 1200,
+                  delayTyping: 1200,
                 }),
               }
             );
 
-            const evoData = await evoRes.json();
-            console.log("Evolution API send result:", JSON.stringify(evoData));
+            const uzData = await uzRes.json();
+            console.log("UZAPI send result:", JSON.stringify(uzData));
 
-            const messageId = evoData?.key?.id || evoData?.messageId || null;
+            const messageId = uzData?.messages?.[0]?.id || uzData?.messageId || null;
 
-            // Save sent message in chat_mensagens
             if (conversaId) {
               await supabase.from("chat_mensagens").insert({
                 conversa_id: conversaId,
@@ -320,7 +321,6 @@ Deno.serve(async (req) => {
                 status: "sent",
               });
 
-              // Update conversation last message
               await supabase
                 .from("chat_conversas")
                 .update({
@@ -332,8 +332,8 @@ Deno.serve(async (req) => {
           }
         }
       }
-    } catch (evoErr) {
-      console.error("Error sending WhatsApp welcome:", evoErr);
+    } catch (uzErr) {
+      console.error("Error sending WhatsApp welcome:", uzErr);
     }
 
     return new Response(

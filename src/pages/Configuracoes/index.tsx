@@ -1,11 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, Stethoscope, Link2, Network, Columns } from 'lucide-react';
+import { Building2, Users, Stethoscope, Link2, Network, Columns, Bot } from 'lucide-react';
 import ClinicaTab from './ClinicaTab';
 import UsuariosTab from './UsuariosTab';
 import ProcedimentosTab from './ProcedimentosTab';
 import IntegracoesTab from './IntegracoesTab';
 import SetoresTab from './SetoresTab';
 import FunisTab from './FunisTab';
+import SupervisoraTab from './SupervisoraTab';
 import { useSearchParams } from 'react-router-dom';
 
 export default function ConfiguracoesPage() {
@@ -39,6 +40,9 @@ export default function ConfiguracoesPage() {
           <TabsTrigger value="integracoes" className="gap-1.5">
             <Link2 className="h-4 w-4" /> Integrações
           </TabsTrigger>
+          <TabsTrigger value="supervisora" className="gap-1.5">
+            <Bot className="h-4 w-4" /> Supervisora IA
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="clinica"><ClinicaTab /></TabsContent>
@@ -47,6 +51,7 @@ export default function ConfiguracoesPage() {
         <TabsContent value="usuarios"><UsuariosTab /></TabsContent>
         <TabsContent value="procedimentos"><ProcedimentosTab /></TabsContent>
         <TabsContent value="integracoes"><IntegracoesTab /></TabsContent>
+        <TabsContent value="supervisora"><SupervisoraTab /></TabsContent>
       </Tabs>
     </div>
   );

@@ -1,25 +1,11 @@
 // @ts-nocheck - This file runs in Deno runtime (Supabase Edge Functions), not Node.js
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendUzapiTextMessage, formatPhone } from "../_shared/uzapi.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-async function sendEvolutionMessage(apiUrl: string, apiKey: string, instanceName: string, phone: string, message: string) {
-  const res = await fetch(`${apiUrl}/message/sendText/${instanceName}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": apiKey },
-    body: JSON.stringify({
-      number: phone,
-      text: message,
-      delay: 1500,
-      presence: "composing",
-      linkPreview: false
-    }),
-  });
-  return res.json();
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -32,23 +18,12 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const API_URL = Deno.env.get("EVOLUTION_API_URL");
-    const GLOBAL_KEY = Deno.env.get("EVOLUTION_GLOBAL_KEY");
-
-    if (!API_URL || !GLOBAL_KEY) {
-      return new Response(JSON.stringify({ error: "Evolution API not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const now = new Date();
-    const in1h = new Date(now.getTime() + 65 * 60 * 1000); // 1h05 ahead
-    const in1hBack = new Date(now.getTime() + 55 * 60 * 1000); // 55min ahead
+    const in1h = new Date(now.getTime() + 65 * 60 * 1000);
+    const in1hBack = new Date(now.getTime() + 55 * 60 * 1000);
     const in24h = new Date(now.getTime() + 24.1 * 60 * 60 * 1000);
     const in24hBack = new Date(now.getTime() + 23.9 * 60 * 60 * 1000);
 
-    // Fetch upcoming appointments (1h and 24h windows)
     const { data: consultas } = await supabase
       .from("consultas")
       .select("id, data_hora, tipo_procedimento, status, paciente_id, lead_id, clinica_id, dentista:usuarios!consultas_dentista_id_fkey(nome)")
@@ -70,12 +45,9 @@ Deno.serve(async (req) => {
       const consultaTime = new Date(consulta.data_hora);
       let reminderType: string | null = null;
 
-      // Check if it's a 1h reminder
       if (consultaTime >= in1hBack && consultaTime <= in1h) {
         reminderType = "reminder_1h";
-      }
-      // Check if it's a 24h reminder
-      else if (consultaTime >= in24hBack && consultaTime <= in24h) {
+      } else if (consultaTime >= in24hBack && consultaTime <= in24h) {
         reminderType = "reminder_24h";
       }
 
@@ -84,7 +56,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Check if already sent
       const { data: existing } = await supabase
         .from("automacao_mensagens")
         .select("id")
@@ -97,7 +68,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Get phone from patient or lead
       let phone: string | null = null;
       let contactName = "";
 
@@ -128,27 +98,26 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const digits = phone.replace(/\D/g, "");
-      const evoPhone = digits.startsWith("55") ? digits : `55${digits}`;
+      const uzapiPhone = formatPhone(phone);
 
-      // Find Evolution API instance for this clinica
+      // Find UZAPI instance for this clinica
       const { data: integracao } = await supabase
         .from("integracoes")
         .select("credentials")
         .eq("clinica_id", consulta.clinica_id)
-        .eq("tipo", "evolution_api")
+        .eq("tipo", "uzapi")
         .eq("ativo", true)
         .limit(1)
         .maybeSingle();
 
       if (!integracao || !integracao.credentials) {
-        console.warn(`No active Evolution instance for clinica ${consulta.clinica_id}, skipping reminder`);
+        console.warn(`No active UZAPI instance for clinica ${consulta.clinica_id}, skipping reminder`);
         skipped++;
         continue;
       }
 
-      const creds = integracao.credentials as { instanceName?: string };
-      if (!creds.instanceName) {
+      const creds = integracao.credentials as { phoneNumberId?: string; token?: string };
+      if (!creds.phoneNumberId || !creds.token) {
         skipped++;
         continue;
       }
@@ -161,23 +130,21 @@ Deno.serve(async (req) => {
       const timeLabel = reminderType === "reminder_1h" ? "em 1 hora" : "amanhã";
       const message = `Olá, ${contactName}! 😊\n\nLembramos que sua consulta está marcada para *${timeLabel}*:\n\n📅 *Data:* ${dateStr}\n⏰ *Horário:* ${timeStr}\n👨‍⚕️ *Dentista:* ${dentistaNome}\n🦷 *Procedimento:* ${consulta.tipo_procedimento}\n\nPodemos confirmar sua presença? Responda *SIM* para confirmar ou *NÃO* para remarcar.`;
 
-      const evoData = await sendEvolutionMessage(API_URL, GLOBAL_KEY, creds.instanceName, evoPhone, message);
-      console.log(`Reminder sent to ${contactName}:`, JSON.stringify(evoData));
+      const apiData = await sendUzapiTextMessage(creds as { phoneNumberId: string; token: string }, uzapiPhone, message, 2, 5);
+      console.log(`Reminder sent to ${contactName}:`, JSON.stringify(apiData));
 
-      const messageId = evoData?.key?.id || evoData?.messageId || null;
+      const messageId = apiData?.messages?.[0]?.id || apiData?.messageId || null;
 
-      // Track sent reminder
       await supabase.from("automacao_mensagens").insert({
         tipo: reminderType,
         referencia_id: consulta.id,
-        phone: evoPhone,
+        phone: uzapiPhone,
       });
 
-      // Save as chat message
       const { data: conversa } = await supabase
         .from("chat_conversas")
         .select("id")
-        .eq("phone", evoPhone)
+        .eq("phone", uzapiPhone)
         .maybeSingle();
 
       if (conversa) {
@@ -196,12 +163,11 @@ Deno.serve(async (req) => {
         }).eq("id", conversa.id);
       }
 
-      // Log
       await supabase.from("system_logs").insert({
         clinica_id: consulta.clinica_id,
         level: "info",
-        action: "send_appointment_reminder_evolution",
-        details: { phone: evoPhone, reminderType, consultaId: consulta.id, instanceName: creds.instanceName }
+        action: "send_appointment_reminder_uzapi",
+        details: { phone: uzapiPhone, reminderType, consultaId: consulta.id, phoneNumberId: creds.phoneNumberId }
       });
 
       sent++;

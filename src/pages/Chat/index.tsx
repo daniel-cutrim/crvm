@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { confirmDialog } from '@/components/ui/confirm-dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Send, MessageSquare, Phone, User, Image, FileText, Mic, MapPin, Sticker, ArrowLeft, Trash2, CheckSquare, ChevronDown, Wifi, MessageCirclePlus } from 'lucide-react';
+import { Search, Send, MessageSquare, Phone, User, Image, FileText, Mic, MapPin, Sticker, ArrowLeft, Trash2, CheckSquare, ChevronDown, Wifi, MessageCirclePlus, Settings2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import AudioRecorder from '@/components/chat/AudioRecorder';
 import ContactStatusTag from '@/components/chat/ContactStatusTag';
+import ContactDetailSheet from '@/components/chat/ContactDetailSheet';
+import SupervisorPanel, { SupervisorTrigger } from '@/components/chat/SupervisorPanel';
+import { useMessageTemplates, MessageTemplateManager, TemplateQuickPicker } from '@/components/chat/MessageTemplates';
+import type { MessageTemplate } from '@/components/chat/MessageTemplates';
 import ChatFilterBar, { ChatFilters, EMPTY_FILTERS } from '@/components/chat/ChatFilterBar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -47,13 +51,12 @@ interface Mensagem {
 
 interface WhatsAppInstance {
   id: string;
-  instanceName: string;
+  phoneNumberId: string;
   setorId: string;
   setorNome: string;
   state: 'open' | 'connecting' | 'close';
 }
 
-type ConnectionState = 'green' | 'yellow' | 'red';
 
 function formatTime(dateStr: string) {
   const date = new Date(dateStr);
@@ -105,43 +108,42 @@ export default function ChatPage() {
   const [newChatInstanceId, setNewChatInstanceId] = useState<string>('');
   const [newChatLoading, setNewChatLoading] = useState(false);
 
-  const checkConnectionStatus = useCallback(async (instanceName: string): Promise<ConnectionState> => {
-    try {
-      const { data } = await supabase.functions.invoke('evolution-api-manager', {
-        body: { action: 'check_connection', instanceName }
-      });
-      const state = data?.state;
-      return state === 'open' ? 'green' : state === 'connecting' ? 'yellow' : 'red';
-    } catch {
-      return 'red';
-    }
-  }, []);
+  // Contact detail sheet
+  const [contactDetailOpen, setContactDetailOpen] = useState(false);
+
+  // Supervisor panel
+  const [supervisorOpen, setSupervisorOpen] = useState(false);
+
+  // Message templates
+  const { templates, fetchTemplates } = useMessageTemplates();
+  const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [templateQuery, setTemplateQuery] = useState('');
 
   const fetchInstances = useCallback(async () => {
     const { data } = await supabase
       .from('integracoes')
       .select('*, setor:setores(*)')
-      .eq('tipo', 'evolution_api')
+      .eq('tipo', 'uzapi')
       .eq('ativo', true);
-      
+
     if (!data) return;
 
-    const withStatus = await Promise.all(
-      data.map(async (integ) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const instName = (integ.credentials as any)?.instanceName;
-        const state = instName ? await checkConnectionStatus(instName) : 'red';
-        return {
-          id: integ.id,
-          instanceName: instName,
-          setorId: integ.setor_id,
-          setorNome: integ.setor?.nome || 'Geral',
-          state: state === 'green' ? 'open' : state === 'yellow' ? 'connecting' : 'close'
-        } as WhatsAppInstance;
-      })
-    );
+    const withStatus = data.map((integ) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const creds = integ.credentials as any;
+      const isConnected = creds?.connected === true;
+      return {
+        id: integ.id,
+        phoneNumberId: creds?.phoneNumberId,
+        setorId: integ.setor_id,
+        setorNome: integ.setor?.nome || 'Geral',
+        state: isConnected ? 'open' : 'close'
+      } as WhatsAppInstance;
+    });
+
     setInstances(withStatus);
-    
+
     // Automatically select all instances on initial load if none selected
     setSelectedInstanceIds(prev => {
       if (prev.size === 0 && withStatus.length > 0) {
@@ -149,29 +151,18 @@ export default function ChatPage() {
       }
       return prev;
     });
-  }, [checkConnectionStatus]);
+  }, []);
 
   useEffect(() => {
     fetchInstances();
-    
-    instancePollingRef.current = setInterval(async () => {
-      setInstances(prev => {
-        prev.forEach(async (integ) => {
-          if (!integ.instanceName) return;
-          const statusResult = await checkConnectionStatus(integ.instanceName);
-          const newState = statusResult === 'green' ? 'open' : statusResult === 'yellow' ? 'connecting' : 'close';
-          setInstances(current => 
-            current.map(i => i.id === integ.id ? { ...i, state: newState } : i)
-          );
-        });
-        return prev;
-      });
-    }, 15000);
+
+    // Refresh instance status from DB every 30s (webhook keeps credentials.connected up to date)
+    instancePollingRef.current = setInterval(fetchInstances, 30000);
 
     return () => {
       if (instancePollingRef.current) clearInterval(instancePollingRef.current);
     };
-  }, [fetchInstances, checkConnectionStatus]);
+  }, [fetchInstances]);
 
   const globalStatus = instances.length === 0 ? 'red' : instances.some(i => i.state === 'open') ? 'green' : instances.some(i => i.state === 'connecting') ? 'yellow' : 'red';
 
@@ -217,10 +208,10 @@ export default function ChatPage() {
     setNewChatLoading(true);
     try {
       const instance = instances.find(i => i.id === newChatInstanceId);
-      if (!instance || !instance.instanceName) throw new Error('Instância inválida');
+      if (!instance || !instance.phoneNumberId) throw new Error('Instância inválida');
 
-      const { data, error } = await supabase.functions.invoke('evolution-api-manager', {
-         body: { action: 'check_whatsapp', instanceName: instance.instanceName, phone: newChatPhone }
+      const { data, error } = await supabase.functions.invoke('uzapi-manager', {
+         body: { action: 'check_whatsapp', phoneNumberId: instance.phoneNumberId, phone: newChatPhone }
       });
 
       if (error) throw error;
@@ -294,6 +285,23 @@ export default function ChatPage() {
 
     return () => { supabase.removeChannel(channel); };
   }, []);
+
+  // Sync sent messages from UZAPI when opening a chat
+  useEffect(() => {
+    if (!selectedConversa || !usuario?.clinica_id) return;
+    const syncSent = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        await supabase.functions.invoke('sync-chat-messages', {
+          body: { phone: selectedConversa.phone },
+        });
+        // Reload messages after sync
+        loadMensagens(selectedConversa.id);
+      } catch (_) { /* silent */ }
+    };
+    syncSent();
+  }, [selectedConversa?.id]);
 
   useEffect(() => {
     if (!selectedConversa) return;
@@ -388,29 +396,12 @@ export default function ChatPage() {
     setSending(true);
 
     try {
-      const fetchRes = await fetch(base64);
-      const blob = await fetchRes.blob();
-      const fileName = `audio_${Date.now()}.webm`;
-      const filePath = `${selectedConversa.id}/${fileName}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('chat-audio')
-        .upload(filePath, blob, { contentType: blob.type });
-
-      if (uploadError) throw uploadError;
-
-      const { data: signData, error: signError } = await supabase.storage
-        .from('chat-audio')
-        .createSignedUrl(filePath, 3600);
-
-      if (signError) throw signError;
-
       const { data, error } = await supabase.functions.invoke('send-message', {
         body: {
           phone: selectedConversa.phone,
           conversa_id: selectedConversa.id,
           type: 'audio',
-          audio_url: signData.signedUrl,
+          base64_audio: base64,
           clinica_id: usuario?.clinica_id,
           setor_id: selectedConversa.setor_id,
         },
@@ -665,7 +656,7 @@ export default function ChatPage() {
       </div>
 
       {/* Message Area */}
-      <div className={`flex-1 flex flex-col ${!selectedConversa ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex-1 min-w-0 flex flex-col ${!selectedConversa ? 'hidden md:flex' : 'flex'}`}>
         {selectedConversa ? (
           <>
             {/* Chat header */}
@@ -679,92 +670,268 @@ export default function ChatPage() {
                   {getInitials(selectedConversa.nome)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 min-w-0">
+              <button
+                className="flex-1 min-w-0 text-left hover:bg-muted/50 rounded-md px-1.5 py-0.5 -ml-1.5 transition-colors"
+                onClick={() => setContactDetailOpen(true)}
+                title="Ver detalhes do contato"
+              >
                 <p className="text-sm font-medium truncate">{selectedConversa.nome}</p>
                 <p className="text-xs text-muted-foreground">{selectedConversa.phone}</p>
-              </div>
+              </button>
               <ContactStatusTag leadId={selectedConversa.lead_id} pacienteId={selectedConversa.paciente_id} />
+              <SupervisorTrigger
+                isOpen={supervisorOpen}
+                onToggle={setSupervisorOpen}
+              />
             </div>
 
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-2 max-w-3xl mx-auto">
-                {mensagens.map(msg => (
+                {mensagens.map(msg => {
+                  // Helper: distinguish between a real URL and a raw Meta media ID (digits only)
+                  const isValidUrl = (url: string | null) => url && (url.startsWith('http://') || url.startsWith('https://'));
+                  const hasMedia = isValidUrl(msg.media_url);
+                  const isProcessing = !!msg.media_url && !hasMedia; // True if it has a raw ID waiting for background sync
+
+                  return (
                   <div key={msg.id} className={`flex ${msg.from_me ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] rounded-xl px-3 py-2 text-sm ${
+                    <div className={`max-w-[75%] rounded-xl px-3 py-2 text-sm overflow-hidden ${
                       msg.from_me
                         ? 'bg-primary text-primary-foreground rounded-br-sm'
                         : 'bg-muted text-foreground rounded-bl-sm'
                     }`}>
                       {msg.tipo !== 'text' && (
                         <div className="mb-1">
-                          <MessageTypeIcon tipo={msg.tipo} />
-                          {msg.tipo === 'image' && msg.media_url && (
-                            <img src={msg.media_url} alt="" className="rounded-lg max-w-full mt-1" />
-                          )}
-                          {msg.tipo === 'audio' && msg.media_url && (
-                            <audio controls src={msg.media_url} className="max-w-full mt-1" />
-                          )}
-                          {msg.tipo === 'video' && msg.media_url && (
-                            <video controls src={msg.media_url} className="rounded-lg max-w-full mt-1" />
-                          )}
-                          {msg.tipo === 'document' && msg.media_url && (
-                            <a href={msg.media_url} target="_blank" rel="noopener" className="underline text-xs">
-                              📎 {msg.conteudo || 'Documento'}
+                          {msg.tipo === 'image' && hasMedia && (
+                            <a href={msg.media_url!} target="_blank" rel="noopener noreferrer">
+                              <img
+                                src={msg.media_url!}
+                                alt={msg.conteudo || 'Imagem'}
+                                className="rounded-lg max-w-full max-h-64 object-cover mt-1 cursor-pointer hover:opacity-90 transition-opacity"
+                                loading="lazy"
+                              />
                             </a>
                           )}
-                          {msg.tipo === 'sticker' && msg.media_url && (
-                            <img src={msg.media_url} alt="sticker" className="w-24 h-24" />
+                          {msg.tipo === 'image' && !hasMedia && (
+                            <div className="flex items-center gap-1.5 text-xs opacity-70">
+                              <Image size={14} className={isProcessing ? "animate-pulse" : ""} /> 
+                              {isProcessing ? "⏳ Processando imagem..." : "📷 Imagem (indisponível)"}
+                            </div>
                           )}
-                          {msg.tipo === 'location' && (
-                            <span className="text-xs">📍 Localização compartilhada</span>
+
+                          {msg.tipo === 'audio' && hasMedia && (
+                            <audio
+                              controls
+                              preload="metadata"
+                              className="mt-1 max-w-[260px]"
+                              style={{ height: '36px' }}
+                            >
+                              <source src={msg.media_url!} type={msg.media_mime_type || 'audio/ogg'} />
+                              <source src={msg.media_url!} type="audio/ogg" />
+                              <source src={msg.media_url!} type="audio/mpeg" />
+                              Seu navegador não suporta áudio.
+                            </audio>
                           )}
-                          {msg.tipo === 'contact' && (
-                            <span className="text-xs">👤 Contato compartilhado</span>
+                          {msg.tipo === 'audio' && !hasMedia && (
+                            <div className="flex items-center gap-1.5 text-xs opacity-70 mt-1">
+                              <Mic size={14} className={isProcessing ? "animate-pulse" : ""} />
+                              {isProcessing ? "⏳ Sincronizando áudio..." : "🎵 Áudio (indisponível)"}
+                            </div>
                           )}
+
+                          {msg.tipo === 'video' && hasMedia && (
+                            <video
+                              controls
+                              preload="metadata"
+                              className="rounded-lg max-w-full max-h-64 mt-1"
+                            >
+                              <source src={msg.media_url!} type={msg.media_mime_type || 'video/mp4'} />
+                              Seu navegador não suporta vídeo.
+                            </video>
+                          )}
+                          {msg.tipo === 'video' && !hasMedia && (
+                            <div className="flex items-center gap-1.5 text-xs opacity-70 mt-1">
+                              <Image size={14} className={isProcessing ? "animate-pulse" : ""} />
+                              {isProcessing ? "⏳ Processando vídeo..." : "🎥 Vídeo (indisponível)"}
+                            </div>
+                          )}
+
+                          {msg.tipo === 'document' && hasMedia && (
+                            <a
+                              href={msg.media_url!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-2 p-2 rounded-lg mt-1 border transition-colors ${
+                                msg.from_me
+                                  ? 'border-primary-foreground/20 hover:bg-primary-foreground/10'
+                                  : 'border-border hover:bg-background'
+                              }`}
+                            >
+                              <FileText size={20} className="shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">{msg.conteudo || 'Documento'}</p>
+                                <p className={`text-[10px] ${msg.from_me ? 'text-primary-foreground/50' : 'text-muted-foreground'}`}>
+                                  Clique para baixar
+                                </p>
+                              </div>
+                            </a>
+                          )}
+                          {msg.tipo === 'document' && !hasMedia && (
+                            <div className={`flex items-center gap-2 p-2 rounded-lg mt-1 border opacity-70 ${
+                              msg.from_me ? 'border-primary-foreground/20' : 'border-border/50'
+                            }`}>
+                              <FileText size={16} className={`shrink-0 ${isProcessing ? "animate-pulse" : ""}`} />
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">{msg.conteudo || 'Documento'}</p>
+                                <p className="text-[10px] text-muted-foreground">{isProcessing ? "Sincronizando arquivo..." : "Arquivo indisponível"}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {msg.tipo === 'sticker' && hasMedia && (
+                            <img
+                              src={msg.media_url!}
+                              alt="sticker"
+                              className="w-28 h-28 object-contain mt-1"
+                              loading="lazy"
+                            />
+                          )}
+                          {msg.tipo === 'sticker' && !hasMedia && (
+                            <span className={`text-xs opacity-70 ${isProcessing ? "animate-pulse" : ""}`}>
+                              {isProcessing ? "⏳ Sincronizando sticker..." : "🏷️ Sticker (indisponível)"}
+                            </span>
+                          )}
+
+                          {msg.tipo === 'location' && (() => {
+                            const mapsUrl = msg.media_url;
+                            const coordsMatch = mapsUrl?.match(/q=([-\d.]+),([-\d.]+)/);
+                            return (
+                              <a
+                                href={mapsUrl || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block mt-1"
+                              >
+                                {coordsMatch ? (
+                                  <img
+                                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${coordsMatch[1]},${coordsMatch[2]}&zoom=15&size=300x150&markers=color:red%7C${coordsMatch[1]},${coordsMatch[2]}&key=`}
+                                    alt="Localização"
+                                    className="rounded-lg max-w-[260px] w-full"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                ) : null}
+                                <div className={`flex items-center gap-1.5 text-xs mt-1 ${
+                                  msg.from_me ? 'text-primary-foreground/80' : 'text-foreground/80'
+                                }`}>
+                                  <MapPin size={14} className="shrink-0" />
+                                  <span className="underline">{msg.conteudo || '📍 Ver localização'}</span>
+                                </div>
+                              </a>
+                            );
+                          })()}
+
+                          {msg.tipo === 'contacts' && (() => {
+                            let contactData: { name?: string; phone?: string } | null = null;
+                            try {
+                              if (msg.media_url) contactData = JSON.parse(msg.media_url);
+                            } catch { /* ignore */ }
+                            return (
+                              <div className={`flex items-center gap-2 p-2 rounded-lg mt-1 border ${
+                                msg.from_me ? 'border-primary-foreground/20' : 'border-border'
+                              }`}>
+                                <User size={20} className="shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium truncate">{contactData?.name || msg.conteudo || 'Contato'}</p>
+                                  {contactData?.phone && (
+                                    <a
+                                      href={`https://wa.me/${contactData.phone.replace(/\D/g, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`text-[10px] underline ${
+                                        msg.from_me ? 'text-primary-foreground/60' : 'text-muted-foreground'
+                                      }`}
+                                    >
+                                      {contactData.phone}
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
-                      {msg.conteudo && msg.tipo === 'text' && <p className="whitespace-pre-wrap break-words">{msg.conteudo}</p>}
-                      {msg.conteudo && msg.tipo === 'image' && <p className="text-xs mt-1 opacity-80">{msg.conteudo}</p>}
+                      {msg.conteudo && msg.tipo === 'text' && <p className="whitespace-pre-wrap break-words" style={{ overflowWrap: 'anywhere' }}>{msg.conteudo}</p>}
+                      {msg.conteudo && msg.tipo === 'image' && msg.conteudo !== '📷 Imagem' && <p className="text-xs mt-1 opacity-80">{msg.conteudo}</p>}
+                      {msg.conteudo && msg.tipo === 'video' && msg.conteudo !== '🎥 Vídeo' && <p className="text-xs mt-1 opacity-80">{msg.conteudo}</p>}
                       <p className={`text-[10px] mt-1 ${msg.from_me ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
                         {format(new Date(msg.timestamp), 'HH:mm')}
                       </p>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 
             {/* Input */}
             <div className="p-3 border-t border-border">
-              <div className="flex gap-2 max-w-3xl mx-auto items-center">
+              <div className="flex gap-2 max-w-3xl mx-auto items-center relative">
+                <TemplateQuickPicker
+                  query={templateQuery}
+                  templates={templates}
+                  visible={showTemplatePicker}
+                  onSelect={(t: MessageTemplate) => {
+                    const content = t.conteudo.replace(/\{nome\}/g, selectedConversa?.nome || '');
+                    setNewMessage(content);
+                    setShowTemplatePicker(false);
+                    setTemplateQuery('');
+                  }}
+                  onClose={() => { setShowTemplatePicker(false); setTemplateQuery(''); }}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 h-9 w-9"
+                  onClick={() => setTemplateManagerOpen(true)}
+                  title="Modelos de mensagem"
+                >
+                  <Settings2 size={16} className="text-muted-foreground" />
+                </Button>
+                <Input
+                  value={newMessage}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setNewMessage(val);
+                    if (val.startsWith('/')) {
+                      setShowTemplatePicker(true);
+                      setTemplateQuery(val.slice(1));
+                    } else {
+                      setShowTemplatePicker(false);
+                      setTemplateQuery('');
+                    }
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape' && showTemplatePicker) {
+                      setShowTemplatePicker(false);
+                      setTemplateQuery('');
+                    } else if (e.key === 'Enter' && !e.shiftKey && !showTemplatePicker) {
+                      handleSend();
+                    }
+                  }}
+                  placeholder="Digite / para modelos ou escreva uma mensagem..."
+                  className="flex-1"
+                  disabled={sending}
+                />
                 {newMessage.trim() ? (
-                  <>
-                    <Input
-                      value={newMessage}
-                      onChange={e => setNewMessage(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                      placeholder="Digite uma mensagem..."
-                      className="flex-1"
-                      disabled={sending}
-                    />
-                    <Button onClick={handleSend} disabled={sending || !newMessage.trim()} size="icon">
-                      <Send size={18} />
-                    </Button>
-                  </>
+                  <Button onClick={handleSend} disabled={sending || !newMessage.trim()} size="icon">
+                    <Send size={18} />
+                  </Button>
                 ) : (
-                  <>
-                    <Input
-                      value={newMessage}
-                      onChange={e => setNewMessage(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                      placeholder="Digite uma mensagem..."
-                      className="flex-1"
-                      disabled={sending}
-                    />
-                    <AudioRecorder onSend={handleSendAudio} disabled={sending} />
-                  </>
+                  <AudioRecorder onSend={handleSendAudio} disabled={sending} />
                 )}
               </div>
             </div>
@@ -778,6 +945,35 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* Supervisor Side Panel */}
+      {selectedConversa && (
+        <SupervisorPanel
+          conversationId={selectedConversa.id}
+          lastLeadMessageAt={selectedConversa.ultima_mensagem_at}
+          isOpen={supervisorOpen}
+          onToggle={setSupervisorOpen}
+        />
+      )}
+
+      {/* Contact Detail Sheet */}
+      {selectedConversa && (
+        <ContactDetailSheet
+          open={contactDetailOpen}
+          onClose={() => setContactDetailOpen(false)}
+          leadId={selectedConversa.lead_id}
+          pacienteId={selectedConversa.paciente_id}
+          contactName={selectedConversa.nome}
+          contactPhone={selectedConversa.phone}
+        />
+      )}
+
+      {/* Template Manager Dialog */}
+      <MessageTemplateManager
+        open={templateManagerOpen}
+        onClose={() => setTemplateManagerOpen(false)}
+        onUpdate={fetchTemplates}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 // @ts-nocheck - This file runs in Deno runtime (Supabase Edge Functions), not Node.js
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendUzapiTextMessage, sendUzapiAudioMessage, formatPhone } from "../_shared/uzapi.ts";
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "*";
@@ -42,17 +43,15 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { phone, message, conversa_id, type = "text", audio_url, clinica_id, setor_id } = body;
+    const { phone, message, conversa_id, type = "text", audio_url, base64_audio, clinica_id, setor_id } = body;
 
     if (!phone) {
-      console.warn("Missing phone parameter");
       return new Response(JSON.stringify({ status: "error", error: "phone is required" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (!clinica_id) {
-      console.warn("Missing clinica_id parameter");
       return new Response(JSON.stringify({ status: "error", error: "clinica_id is required for multi-tenant" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -60,16 +59,14 @@ Deno.serve(async (req) => {
     }
 
     if (type === "text" && !message) {
-      console.warn("Missing message text for text type");
       return new Response(JSON.stringify({ status: "error", error: "message is required for text" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (type === "audio" && !audio_url) {
-      console.warn("Missing audio_url for audio type");
-      return new Response(JSON.stringify({ status: "error", error: "audio_url is required for audio" }), {
+    if (type === "audio" && !audio_url && !base64_audio) {
+      return new Response(JSON.stringify({ status: "error", error: "audio_url or base64_audio is required for audio" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -88,19 +85,18 @@ Deno.serve(async (req) => {
       .single();
 
     if (!userRecord || userRecord.clinica_id !== clinica_id) {
-      console.warn("IDOR Block - Mismatched Clinica_ID:", clinica_id);
       return new Response(JSON.stringify({ status: "error", error: "Acesso negado: clínica inválida" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch dynamic Evolution API credentials for this clinica/setor
+    // Fetch UZAPI credentials for this clinica/setor
     let integracaoQuery = serviceClient
       .from("integracoes")
       .select("credentials")
       .eq("clinica_id", clinica_id)
-      .eq("tipo", "evolution_api")
+      .eq("tipo", "uzapi")
       .eq("ativo", true);
 
     if (setor_id) {
@@ -110,86 +106,73 @@ Deno.serve(async (req) => {
     const { data: integracao } = await integracaoQuery.limit(1).maybeSingle();
 
     if (!integracao || !integracao.credentials) {
-      console.warn(`Integration not found for Clinica: ${clinica_id}, Setor: ${setor_id}`);
       return new Response(JSON.stringify({ status: "error", error: "O WhatsApp deste setor/clínica não está conectado." }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const creds = integracao.credentials as { instanceName?: string; token?: string };
-    const instanceName = creds.instanceName;
+    const creds = integracao.credentials as { phoneNumberId?: string; token?: string };
 
-    if (!instanceName) {
-      console.warn("instanceName missing in credentials", creds);
+    if (!creds.phoneNumberId || !creds.token) {
       return new Response(JSON.stringify({ status: "error", error: "Credenciais de WhatsApp incompletas no banco de dados." }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const API_URL = Deno.env.get("EVOLUTION_API_URL");
-    const GLOBAL_KEY = Deno.env.get("EVOLUTION_GLOBAL_KEY");
+    const uzapiPhone = formatPhone(phone);
 
-    if (!API_URL || !GLOBAL_KEY) {
-      return new Response(JSON.stringify({ status: "error", error: "Evolution API server not configured" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let finalAudioUrl = audio_url;
+
+    if (type === "audio" && base64_audio) {
+      try {
+        // Extract base64 safely, ignoring any complex headers like audio/webm;codecs=opus
+        const base64Data = base64_audio.includes(",") ? base64_audio.split(",")[1] : base64_audio;
+        // Decode base64 using atob (standard in Deno/Browser)
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        const fileName = `audio_${Date.now()}.ogg`;
+        const filePath = `${clinica_id}/${fileName}`;
+        
+        const { error: uploadError } = await serviceClient.storage
+           .from("chat-media")
+           .upload(filePath, bytes, { contentType: "audio/ogg" });
+           
+        if (uploadError) throw new Error("Falha ao salvar audio no storage: " + uploadError.message);
+        
+        const { data: urlData } = serviceClient.storage.from("chat-media").getPublicUrl(filePath);
+        finalAudioUrl = urlData.publicUrl;
+      } catch (err: unknown) {
+        return new Response(JSON.stringify({ status: "error", error: "Erro ao processar áudio: " + ((err as Error).message || "Desconhecido") }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
-    const digits = phone.replace(/\D/g, "");
-    const evoPhone = digits.startsWith("55") ? digits : `55${digits}`;
-
-    let evoUrl: string;
-    let evoBody: Record<string, unknown>;
-
+    let apiData: Record<string, unknown>;
     if (type === "audio") {
-      evoUrl = `${API_URL}/message/sendWhatsAppAudio/${instanceName}`;
-      evoBody = {
-        number: evoPhone,
-        audio: audio_url,
-        options: { delay: 1200, presence: "composing", encoding: true }
-      };
+      apiData = await sendUzapiAudioMessage(creds as { phoneNumberId: string; token: string }, uzapiPhone, finalAudioUrl);
     } else {
-      evoUrl = `${API_URL}/message/sendText/${instanceName}`;
-      evoBody = {
-        number: evoPhone,
-        text: message,
-        delay: 1200,
-        presence: "composing",
-        linkPreview: false
-      };
+      apiData = await sendUzapiTextMessage(creds as { phoneNumberId: string; token: string }, uzapiPhone, message);
     }
 
-    const evoRes = await fetch(evoUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": GLOBAL_KEY,
-      },
-      body: JSON.stringify(evoBody),
-    });
+    console.log("UZAPI send response:", JSON.stringify(apiData));
 
-    const evoData = await evoRes.json();
-    console.log("Evolution API send response:", JSON.stringify(evoData));
-
-    if (!evoRes.ok) {
-      return new Response(JSON.stringify({ status: "error", error: "Failed to send message: " + (evoData?.response?.message?.[0] || evoData?.message || "Serviço Inativo") }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Extract message ID from Evolution response
-    const messageId = evoData?.key?.id || evoData?.messageId || null;
+    // Extract message ID from UZAPI response
+    const messageId = apiData?.messages?.[0]?.id || apiData?.messageId || null;
 
     let conversaId = conversa_id;
     if (!conversaId) {
       const { data: existing } = await serviceClient
         .from("chat_conversas")
         .select("id")
-        .eq("phone", evoPhone)
+        .eq("phone", uzapiPhone)
         .eq("clinica_id", clinica_id)
         .maybeSingle();
 
@@ -198,7 +181,7 @@ Deno.serve(async (req) => {
       } else {
         const { data: newConv } = await serviceClient
           .from("chat_conversas")
-          .insert({ phone: evoPhone, nome: `WhatsApp ${phone}`, clinica_id })
+          .insert({ phone: uzapiPhone, nome: `WhatsApp ${phone}`, clinica_id })
           .select("id")
           .single();
         conversaId = newConv?.id;
@@ -214,6 +197,8 @@ Deno.serve(async (req) => {
         from_me: true,
         tipo: type,
         conteudo: type === "text" ? message : null,
+        media_url: type === "audio" ? finalAudioUrl : null,
+        media_mime_type: type === "audio" ? "audio/ogg" : null,
         status: "sent",
         clinica_id: clinica_id,
       });
@@ -224,12 +209,11 @@ Deno.serve(async (req) => {
       }).eq("id", conversaId);
     }
 
-    // Log success
     await serviceClient.from("system_logs").insert({
       clinica_id: clinica_id,
       level: "info",
-      action: "send_evolution_message",
-      details: { phone: evoPhone, type, messageId, instanceName }
+      action: "send_uzapi_message",
+      details: { phone: uzapiPhone, type, messageId, phoneNumberId: creds.phoneNumberId }
     });
 
     return new Response(
@@ -246,7 +230,7 @@ Deno.serve(async (req) => {
       );
       await serviceClient.from("system_logs").insert({
         level: "error",
-        action: "send_evolution_message_error",
+        action: "send_uzapi_message_error",
         details: { error: String(err) }
       });
     } catch (_logErr) {
