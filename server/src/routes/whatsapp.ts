@@ -14,16 +14,34 @@ const zapiHeaders = {
 /**
  * GET /api/whatsapp/status
  * Returns the current Z-API instance connection status.
+ * Z-API may return { connected: boolean } or { value: "CONNECTED"|"DISCONNECTED" }
  */
 router.get('/status', async (_req: Request, res: Response): Promise<void> => {
   try {
     const r = await fetch(`${ZAPI_BASE}/status`, { headers: zapiHeaders });
-    const data = await r.json() as { connected?: boolean; smartphoneConnected?: boolean };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = await r.json() as Record<string, any>;
+
+    // Log raw Z-API response to help debug status detection
+    console.log('[whatsapp] status raw:', JSON.stringify(data));
+
+    // Handle multiple possible Z-API response formats
+    let connected = false;
+    if (typeof data.connected === 'boolean') {
+      connected = data.connected;
+    } else if (typeof data.connected === 'string') {
+      connected = data.connected.toLowerCase() === 'true';
+    } else if (typeof data.value === 'string') {
+      connected = data.value.toUpperCase() === 'CONNECTED';
+    } else if (typeof data.status === 'string') {
+      connected = data.status.toUpperCase() === 'CONNECTED';
+    }
 
     res.json({
-      connected: data.connected ?? false,
+      connected,
       smartphoneConnected: data.smartphoneConnected ?? false,
-      state: data.connected ? 'open' : 'close',
+      state: connected ? 'open' : 'close',
+      raw: data, // useful for debugging on frontend console
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown';
@@ -31,6 +49,7 @@ router.get('/status', async (_req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: msg, connected: false, state: 'unknown' });
   }
 });
+
 
 /**
  * GET /api/whatsapp/qr-code
