@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { config } from '../config.js';
+import QRCode from 'qrcode';
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.get('/status', async (_req: Request, res: Response): Promise<void> => {
 
 /**
  * GET /api/whatsapp/qr-code
- * Returns the Z-API QR code as a JSON object { qrCode: "data:image/png;base64,..." }
+ * Fetches QR code text from Z-API and generates a PNG data URL using the qrcode library.
  */
 router.get('/qr-code', async (_req: Request, res: Response): Promise<void> => {
   try {
@@ -47,7 +48,16 @@ router.get('/qr-code', async (_req: Request, res: Response): Promise<void> => {
     }
 
     const data = await r.json() as { value?: string };
-    res.json({ qrCode: data.value || null });
+    const qrText = data.value;
+
+    if (!qrText) {
+      res.json({ qrCode: null });
+      return;
+    }
+
+    // Generate PNG data URL from the QR code text
+    const dataUrl = await QRCode.toDataURL(qrText, { width: 300, margin: 2 });
+    res.json({ qrCode: dataUrl });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown';
     console.error(`[whatsapp] qr-code error: ${msg}`);
