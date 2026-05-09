@@ -121,24 +121,39 @@ export default function ChatPage() {
   const [templateQuery, setTemplateQuery] = useState('');
 
   const fetchInstances = useCallback(async () => {
+    // Fetch all active integrations (zapi, uzapi, evolution_api)
     const { data } = await supabase
       .from('integracoes')
       .select('*, setor:setores(*)')
-      .eq('tipo', 'zapi')
       .eq('ativo', true);
 
-    // Also include uzapi for backward compat if no zapi integrations found
-    const finalData = (data && data.length > 0) ? data : (await supabase
-      .from('integracoes')
-      .select('*, setor:setores(*)')
-      .eq('ativo', true)
-      .then(r => r.data)) ?? [];
-    if (!data) return;
+    if (!data || data.length === 0) {
+      setInstances([]);
+      return;
+    }
+
+    // Fetch real connection status from backend server
+    const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+    const apiKey = import.meta.env.VITE_SERVER_API_KEY || '';
+    let isServerConnected = false;
+    try {
+      const statusRes = await fetch(`${serverUrl}/api/whatsapp/status`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { 'x-api-key': apiKey } : {}),
+        },
+      });
+      const statusData = await statusRes.json();
+      isServerConnected = statusData.connected === true;
+    } catch {
+      // Server unreachable — fall back to credentials.connected
+    }
 
     const withStatus = data.map((integ) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const creds = integ.credentials as any;
-      const isConnected = creds?.connected === true;
+      // Use real server status, fallback to DB credentials
+      const isConnected = isServerConnected || creds?.connected === true;
       return {
         id: integ.id,
         phoneNumberId: creds?.phoneNumberId,
