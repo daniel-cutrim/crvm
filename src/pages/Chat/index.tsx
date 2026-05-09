@@ -124,9 +124,15 @@ export default function ChatPage() {
     const { data } = await supabase
       .from('integracoes')
       .select('*, setor:setores(*)')
-      .eq('tipo', 'uzapi')
+      .eq('tipo', 'zapi')
       .eq('ativo', true);
 
+    // Also include uzapi for backward compat if no zapi integrations found
+    const finalData = (data && data.length > 0) ? data : (await supabase
+      .from('integracoes')
+      .select('*, setor:setores(*)')
+      .eq('ativo', true)
+      .then(r => r.data)) ?? [];
     if (!data) return;
 
     const withStatus = data.map((integ) => {
@@ -210,18 +216,13 @@ export default function ChatPage() {
       const instance = instances.find(i => i.id === newChatInstanceId);
       if (!instance || !instance.phoneNumberId) throw new Error('Instância inválida');
 
-      const { data, error } = await supabase.functions.invoke('uzapi-manager', {
-         body: { action: 'check_whatsapp', phoneNumberId: instance.phoneNumberId, phone: newChatPhone }
-      });
-
-      if (error) throw error;
-      if (!data?.success || !data?.exists) {
-         toast.error('Este número não possui WhatsApp registrado.');
-         setNewChatLoading(false);
-         return;
+      // Z-API: simply check if the phone looks valid (no API call needed for basic check)
+      const wppPhone = newChatPhone.replace(/\D/g, '');
+      if (wppPhone.length < 10) {
+        toast.error('Número de telefone inválido.');
+        setNewChatLoading(false);
+        return;
       }
-
-      const wppPhone = data.formattedPhone || newChatPhone.replace(/\D/g, "");
 
       const { data: existing } = await supabase.from('chat_conversas')
         .select('*')
@@ -368,24 +369,31 @@ export default function ChatPage() {
     if (!newMessage.trim() || !selectedConversa || sending) return;
     setSending(true);
 
+    const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+    const apiKey = import.meta.env.VITE_SERVER_API_KEY || '';
+
     try {
-      const { data, error } = await supabase.functions.invoke('send-message', {
-        body: {
+      const res = await fetch(`${serverUrl}/api/send-message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { 'x-api-key': apiKey } : {}),
+        },
+        body: JSON.stringify({
           phone: selectedConversa.phone,
           message: newMessage,
           conversa_id: selectedConversa.id,
           type: 'text',
           clinica_id: usuario?.clinica_id,
-          setor_id: selectedConversa.setor_id,
-        },
+        }),
       });
 
-      if (error) throw error;
-      if (data?.status === 'error' || data?.error) throw new Error(data.error);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao enviar');
 
       setNewMessage('');
-    } catch (err: Record<string, unknown>) {
-      toast.error('Erro ao enviar mensagem: ' + (err.message || 'Erro desconhecido'));
+    } catch (err: unknown) {
+      toast.error('Erro ao enviar mensagem: ' + ((err as Error).message || 'Erro desconhecido'));
     } finally {
       setSending(false);
     }
@@ -395,20 +403,27 @@ export default function ChatPage() {
     if (!selectedConversa || sending) return;
     setSending(true);
 
+    const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+    const apiKey = import.meta.env.VITE_SERVER_API_KEY || '';
+
     try {
-      const { data, error } = await supabase.functions.invoke('send-message', {
-        body: {
+      const res = await fetch(`${serverUrl}/api/send-message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { 'x-api-key': apiKey } : {}),
+        },
+        body: JSON.stringify({
           phone: selectedConversa.phone,
           conversa_id: selectedConversa.id,
           type: 'audio',
           base64_audio: base64,
           clinica_id: usuario?.clinica_id,
-          setor_id: selectedConversa.setor_id,
-        },
+        }),
       });
 
-      if (error) throw error;
-      if (data?.status === 'error' || data?.error) throw new Error(data.error);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao enviar áudio');
     } catch (err: unknown) {
       toast.error('Erro ao enviar áudio: ' + ((err as Error).message || 'Erro desconhecido'));
     } finally {

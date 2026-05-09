@@ -5,6 +5,7 @@ import { config, validateConfig } from './config.js';
 import webhookZapiRouter from './routes/webhookZapi.js';
 import supervisorRouter from './routes/supervisor.js';
 import supervisorConfigRouter from './routes/supervisorConfig.js';
+import sendMessageRouter from './routes/sendMessage.js';
 import { runCrmExtraction } from './services/crmExtraction.js';
 
 // Validate environment before anything else
@@ -38,6 +39,7 @@ app.get('/health', (_req, res) => {
 app.use(webhookZapiRouter);
 app.use(supervisorRouter);
 app.use('/api/supervisor-config', supervisorConfigRouter);
+app.use('/api/send-message', sendMessageRouter);
 
 // Global error handler (prevents unhandled rejections from crashing the server)
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
