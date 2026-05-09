@@ -287,22 +287,7 @@ export default function ChatPage() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Sync sent messages from UZAPI when opening a chat
-  useEffect(() => {
-    if (!selectedConversa || !usuario?.clinica_id) return;
-    const syncSent = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-        await supabase.functions.invoke('sync-chat-messages', {
-          body: { phone: selectedConversa.phone },
-        });
-        // Reload messages after sync
-        loadMensagens(selectedConversa.id);
-      } catch (_) { /* silent */ }
-    };
-    syncSent();
-  }, [selectedConversa?.id]);
+  // Z-API delivers outbound messages via webhook — no manual sync needed
 
   useEffect(() => {
     if (!selectedConversa) return;
