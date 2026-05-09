@@ -9,7 +9,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nome, setNome] = useState('');
-  const [tipoClinica, setTipoClinica] = useState('odontologia');
+
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,7 +37,7 @@ export default function Login() {
       if (error) setError('E-mail ou senha incorretos.');
     } else {
       if (!nome.trim()) { setError('Informe seu nome.'); setLoading(false); return; }
-      const { error } = await signUp(email, password, nome, 'Gestor', tipoClinica);
+      const { error } = await signUp(email, password, nome, 'Gestor');
       if (error) setError(error.message || 'Erro ao criar conta.');
       else setSuccessMessage('Conta criada com sucesso! Verifique seu e-mail.');
     }
@@ -52,13 +52,13 @@ export default function Login() {
         <div className="max-w-md text-center">
           <div className="-mb-8">
             <img 
-              src="/logo-medroi-final.png" 
-              alt="MedROI" 
+              src="/logo.png" 
+              alt="CRVM" 
               className="h-72 mx-auto object-contain contrast-125 brightness-[1.1] drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]" 
             />
           </div>
           <p className="text-white/80 text-lg">
-            CRM + Gestão Clínica completa para sua clínica
+            CRM completo para gestão de vendas e marketing
           </p>
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <img src="/logo-medroi-final.png" alt="MedROI" className="h-9" />
+            <img src="/logo.png" alt="CRVM" className="h-9" />
           </div>
 
           <h2 className="text-2xl font-bold text-foreground mb-1">
@@ -87,26 +87,10 @@ export default function Login() {
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
                     className="dental-input"
-                    placeholder="Dr. João Silva"
+                    placeholder="João Silva"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Tipo de Clínica</label>
-                  <select
-                    value={tipoClinica}
-                    onChange={(e) => setTipoClinica(e.target.value)}
-                    className="dental-input"
-                  >
-                    <option value="odontologia">🦷 Odontológica</option>
-                    <option value="medica">🩺 Médica Geral</option>
-                    <option value="estetica">✨ Estética</option>
-                    <option value="psicologia">🧠 Psicologia / Terapia</option>
-                    <option value="fisioterapia">💪 Fisioterapia</option>
-                    <option value="nutricao">🥗 Nutrição</option>
-                    <option value="veterinaria">🐾 Veterinária</option>
-                    <option value="outra">📋 Outra especialidade</option>
-                  </select>
-                </div>
+
               </>
             )}
             <div>

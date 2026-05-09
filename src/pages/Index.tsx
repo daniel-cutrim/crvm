@@ -2,27 +2,25 @@ import { useState, Suspense, lazy, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { isGestor, isOnlyProfissional } from '@/utils/roles';
 import { useParams, useNavigate } from 'react-router-dom';
-import DentalLayout from '@/components/layout/DentalLayout';
+import AppLayout from '@/components/layout/DentalLayout';
 import Login from '@/pages/Login';
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
-const PacientesPage = lazy(() => import('@/pages/Pacientes'));
 const AgendaPage = lazy(() => import('@/pages/Agenda'));
 const CRMPage = lazy(() => import('@/pages/CRM'));
-const PlanosTratamentoPage = lazy(() => import('@/pages/PlanosTratamento'));
 const FinanceiroPage = lazy(() => import('@/pages/Financeiro'));
 const TarefasPage = lazy(() => import('@/pages/Tarefas'));
 const ConfiguracoesPage = lazy(() => import('@/pages/Configuracoes'));
 const MarketingPage = lazy(() => import('@/pages/Marketing'));
 const ChatPage = lazy(() => import('@/pages/Chat'));
 
-type Page = 'dashboard' | 'pacientes' | 'agenda' | 'crm' | 'planos' | 'financeiro' | 'marketing' | 'chat' | 'tarefas' | 'configuracoes';
+type Page = 'dashboard' | 'agenda' | 'crm' | 'financeiro' | 'marketing' | 'chat' | 'tarefas' | 'configuracoes';
 
 export default function IndexPage() {
   const { user, usuario, loading } = useAuth();
   const { page } = useParams<{ page: string }>();
   const navigate = useNavigate();
 
-  const validPages: Page[] = ['dashboard', 'pacientes', 'agenda', 'crm', 'planos', 'financeiro', 'marketing', 'chat', 'tarefas', 'configuracoes'];
+  const validPages: Page[] = ['dashboard', 'agenda', 'crm', 'financeiro', 'marketing', 'chat', 'tarefas', 'configuracoes'];
   const initialPage = (page && validPages.includes(page as Page)) ? (page as Page) : 'dashboard';
 
   const [currentPage, setCurrentPage] = useState<Page>(initialPage);
@@ -58,10 +56,8 @@ export default function IndexPage() {
     const papel = usuario.papel;
     switch (currentPage) {
       case 'dashboard': return <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
-      case 'pacientes': return <PacientesPage />;
       case 'agenda': return <AgendaPage />;
       case 'crm': return !isOnlyProfissional(papel) ? <CRMPage onNavigate={(p) => handlePageChange(p as Page)} /> : <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
-      case 'planos': return <PlanosTratamentoPage />;
       case 'financeiro': return isGestor(papel) ? <FinanceiroPage /> : <Dashboard />;
       case 'marketing': return isGestor(papel) ? <MarketingPage /> : <Dashboard />;
       case 'chat': return (isGestor(papel) || papel === 'Recepção') ? <ChatPage /> : <Dashboard />;
@@ -72,7 +68,7 @@ export default function IndexPage() {
   };
 
   return (
-    <DentalLayout currentPage={currentPage} onPageChange={handlePageChange}>
+    <AppLayout currentPage={currentPage} onPageChange={handlePageChange}>
       <Suspense fallback={
         <div className="w-full h-full flex flex-col items-center justify-center min-h-[50vh]">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -81,6 +77,6 @@ export default function IndexPage() {
       }>
         {renderPage()}
       </Suspense>
-    </DentalLayout>
+    </AppLayout>
   );
 }

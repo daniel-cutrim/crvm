@@ -17,10 +17,8 @@ interface LayoutProps {
 
 const allMenuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
-  { id: 'pacientes', label: 'Pacientes', icon: Users, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
   { id: 'agenda', label: 'Agenda', icon: Calendar, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
   { id: 'crm', label: 'CRM / Leads', icon: Target, roles: ['Gestor', 'Recepção', 'Gestor/Profissional'] },
-  { id: 'planos', label: 'Planos de Tratamento', icon: ClipboardList, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
   { id: 'financeiro', label: 'Financeiro', icon: DollarSign, roles: ['Gestor', 'Gestor/Profissional'] },
   { id: 'marketing', label: 'Marketing', icon: Megaphone, roles: ['Gestor', 'Gestor/Profissional'] },
   { id: 'chat', label: 'Chat WhatsApp', icon: MessageSquare, roles: ['Gestor', 'Recepção', 'Gestor/Profissional'] },
@@ -28,7 +26,7 @@ const allMenuItems = [
   { id: 'configuracoes', label: 'Configurações', icon: Settings, roles: ['Gestor', 'Gestor/Profissional'] },
 ];
 
-export default function DentalLayout({ children, currentPage, onPageChange }: LayoutProps) {
+export default function AppLayout({ children, currentPage, onPageChange }: LayoutProps) {
   const { usuario, signOut } = useAuth();
   const { consultas } = useConsultas();
   const { tarefas } = useTarefas();
@@ -52,7 +50,7 @@ export default function DentalLayout({ children, currentPage, onPageChange }: La
     }
   }, [usuario?.clinica?.cor_primaria]);
 
-  const clinicaNome = usuario?.clinica?.nome || 'MedROI';
+  const clinicaNome = usuario?.clinica?.nome || 'CRVM';
   const clinicaLogo = usuario?.clinica?.logo_url;
   const clinicaIniciais = clinicaNome.substring(0, 2).toUpperCase();
 

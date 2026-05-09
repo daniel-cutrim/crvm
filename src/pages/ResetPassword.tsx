@@ -57,7 +57,7 @@ export default function ResetPassword() {
       <div className="min-h-screen bg-background flex items-center justify-center p-8">
         <div className="text-center max-w-md">
           <div className="flex items-center justify-center mx-auto mb-4">
-            <img src="/logo-medroi-final.png" alt="MedROI" className="h-10" />
+            <img src="/logo.png" alt="CRVM" className="h-10" />
           </div>
           <h1 className="text-xl font-bold text-foreground mb-2">Link inválido</h1>
           <p className="text-muted-foreground text-sm mb-6">
@@ -92,8 +92,8 @@ export default function ResetPassword() {
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 mb-8 justify-center">
           <img 
-            src="/logo-medroi-final.png" 
-            alt="MedROI" 
+            src="/logo.png" 
+            alt="CRVM" 
             className="h-9 contrast-125 brightness-[1.05] drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" 
           />
         </div>
