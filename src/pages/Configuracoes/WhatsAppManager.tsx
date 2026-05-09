@@ -23,8 +23,8 @@ export default function WhatsAppManager() {
   const [status, setStatus] = useState<ZapiStatus>({ connected: false, state: 'unknown' });
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
-  // QR refresh key to force image reload every few seconds
-  const [qrKey, setQrKey] = useState(Date.now());
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
   const qrPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -42,19 +42,34 @@ export default function WhatsAppManager() {
     }
   }, []);
 
+  const fetchQrCode = useCallback(async () => {
+    setQrLoading(true);
+    try {
+      const res = await fetch(`${SERVER_URL}/api/whatsapp/qr-code`, { headers: serverHeaders });
+      const data = await res.json() as { qrCode?: string; error?: string };
+      setQrCode(data.qrCode || null);
+    } catch {
+      setQrCode(null);
+    } finally {
+      setQrLoading(false);
+    }
+  }, []);
+
   const startQrPolling = useCallback(() => {
     if (qrPollingRef.current) return;
-    // Refresh QR code image every 20 seconds (Z-API QR expires)
+    fetchQrCode(); // Fetch immediately
+    // Refresh QR code every 20 seconds (Z-API QR expires)
     qrPollingRef.current = setInterval(() => {
-      setQrKey(Date.now());
+      fetchQrCode();
     }, 20000);
-  }, []);
+  }, [fetchQrCode]);
 
   const stopQrPolling = useCallback(() => {
     if (qrPollingRef.current) {
       clearInterval(qrPollingRef.current);
       qrPollingRef.current = null;
     }
+    setQrCode(null);
   }, []);
 
   useEffect(() => {
@@ -98,7 +113,7 @@ export default function WhatsAppManager() {
   };
 
   const handleRefreshQr = () => {
-    setQrKey(Date.now());
+    fetchQrCode();
     toast.info('QR Code atualizado');
   };
 
@@ -113,10 +128,10 @@ export default function WhatsAppManager() {
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Smartphone className="h-5 w-5 text-green-500" />
-              WhatsApp (Z-API)
+              WhatsApp
             </CardTitle>
             <CardDescription className="mt-1">
-              Gerencie a conexão do WhatsApp da sua clínica via Z-API.
+              Gerencie a conexão do WhatsApp da sua clínica.
             </CardDescription>
           </div>
 
@@ -155,7 +170,7 @@ export default function WhatsAppManager() {
               }
             </div>
             <div>
-              <h4 className="font-semibold text-foreground">Instância Z-API</h4>
+              <h4 className="font-semibold text-foreground">Conecte seu WhatsApp</h4>
               {status.connected ? (
                 <div className="flex items-center gap-1.5">
                   <span className="relative flex h-2.5 w-2.5">
@@ -175,19 +190,27 @@ export default function WhatsAppManager() {
 
           {!status.connected && (
             <div className="mt-2">
-              <div className="p-4 border rounded-lg bg-white inline-block text-center">
-                <img
-                  key={qrKey}
-                  src={`${SERVER_URL}/api/whatsapp/qr-code?t=${qrKey}`}
-                  alt="WhatsApp QR Code"
-                  className="w-[200px] h-[200px] mx-auto block"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-                <p className="text-sm font-medium mt-2 text-black">Leia o código com seu WhatsApp</p>
-                <p className="text-xs text-gray-400 mt-1">Atualiza a cada 20 segundos</p>
-              </div>
+              {qrLoading && !qrCode ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Carregando QR Code...
+                </div>
+              ) : qrCode ? (
+                <div className="p-4 border rounded-lg bg-white inline-block text-center">
+                  <img
+                    src={qrCode}
+                    alt="WhatsApp QR Code"
+                    className="w-[200px] h-[200px] mx-auto block"
+                  />
+                  <p className="text-sm font-medium mt-2 text-black">Leia o código com seu WhatsApp</p>
+                  <p className="text-xs text-gray-400 mt-1">Atualiza a cada 20 segundos</p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Aguardando QR Code da Z-API...
+                </div>
+              )}
             </div>
           )}
         </div>

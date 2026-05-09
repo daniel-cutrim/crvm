@@ -33,30 +33,28 @@ router.get('/status', async (_req: Request, res: Response): Promise<void> => {
 
 /**
  * GET /api/whatsapp/qr-code
- * Proxies the Z-API QR code image to avoid exposing the token to the browser.
- * Returns the PNG image directly.
+ * Returns the Z-API QR code as a JSON object { qrCode: "data:image/png;base64,..." }
  */
 router.get('/qr-code', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const r = await fetch(`${ZAPI_BASE}/qr-code/image`, { headers: zapiHeaders });
+    const r = await fetch(`${ZAPI_BASE}/qr-code`, { headers: zapiHeaders });
 
     if (!r.ok) {
-      res.status(r.status).json({ error: `Z-API returned ${r.status}` });
+      const body = await r.text().catch(() => '');
+      console.error(`[whatsapp] qr-code Z-API error ${r.status}: ${body.slice(0, 200)}`);
+      res.status(r.status).json({ error: `Z-API returned ${r.status}`, detail: body.slice(0, 200) });
       return;
     }
 
-    const contentType = r.headers.get('content-type') || 'image/png';
-    const buffer = await r.arrayBuffer();
-
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'no-store'); // QR codes expire — never cache
-    res.send(Buffer.from(buffer));
+    const data = await r.json() as { value?: string };
+    res.json({ qrCode: data.value || null });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown';
     console.error(`[whatsapp] qr-code error: ${msg}`);
     res.status(500).json({ error: msg });
   }
 });
+
 
 /**
  * POST /api/whatsapp/disconnect
