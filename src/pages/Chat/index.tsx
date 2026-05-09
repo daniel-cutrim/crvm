@@ -127,11 +127,6 @@ export default function ChatPage() {
       .select('*, setor:setores(*)')
       .eq('ativo', true);
 
-    if (!data || data.length === 0) {
-      setInstances([]);
-      return;
-    }
-
     // Fetch real connection status from backend server
     const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
     const apiKey = import.meta.env.VITE_SERVER_API_KEY || '';
@@ -146,22 +141,36 @@ export default function ChatPage() {
       const statusData = await statusRes.json();
       isServerConnected = statusData.connected === true;
     } catch {
-      // Server unreachable — fall back to credentials.connected
+      // Server unreachable
     }
 
-    const withStatus = data.map((integ) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const creds = integ.credentials as any;
-      // Use real server status, fallback to DB credentials
-      const isConnected = isServerConnected || creds?.connected === true;
-      return {
-        id: integ.id,
-        phoneNumberId: creds?.phoneNumberId,
-        setorId: integ.setor_id,
-        setorNome: integ.setor?.nome || 'Geral',
-        state: isConnected ? 'open' : 'close'
-      } as WhatsAppInstance;
-    });
+    let withStatus: WhatsAppInstance[];
+
+    if (data && data.length > 0) {
+      withStatus = data.map((integ) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const creds = integ.credentials as any;
+        const isConnected = isServerConnected || creds?.connected === true;
+        return {
+          id: integ.id,
+          phoneNumberId: creds?.phoneNumberId,
+          setorId: integ.setor_id,
+          setorNome: integ.setor?.nome || 'Geral',
+          state: isConnected ? 'open' : 'close'
+        } as WhatsAppInstance;
+      });
+    } else if (isServerConnected) {
+      // No integrations in DB but server is connected — create virtual instance
+      withStatus = [{
+        id: 'server-default',
+        phoneNumberId: '',
+        setorId: '',
+        setorNome: 'WhatsApp Principal',
+        state: 'open',
+      }];
+    } else {
+      withStatus = [];
+    }
 
     setInstances(withStatus);
 
@@ -185,7 +194,7 @@ export default function ChatPage() {
     };
   }, [fetchInstances]);
 
-  const globalStatus = instances.length === 0 ? 'red' : instances.some(i => i.state === 'open') ? 'green' : instances.some(i => i.state === 'connecting') ? 'yellow' : 'red';
+  const globalStatus = instances.some(i => i.state === 'open') ? 'green' : instances.some(i => i.state === 'connecting') ? 'yellow' : instances.length === 0 ? 'red' : 'red';
 
   function toggleSelect(id: string) {
     setSelectedIds(prev => {
@@ -454,7 +463,8 @@ export default function ChatPage() {
       }
     }
 
-    if (c.setor_id) {
+    // Only filter by instance/setor when instances are loaded and user is actively filtering
+    if (c.setor_id && instances.length > 0 && selectedInstanceIds.size < instances.length) {
        const hasSelectedInstance = instances.some(i => selectedInstanceIds.has(i.id) && i.setorId === c.setor_id);
        if (!hasSelectedInstance) return false;
     }
