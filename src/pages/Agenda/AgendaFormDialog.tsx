@@ -32,7 +32,7 @@ export default function AgendaFormDialog({
 }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const { labelProfissional, isOdontologia } = useClinicaConfig();
+  const { labelProfissional } = useClinicaConfig();
 
   const defaultDate = selectedSlot
     ? format(selectedSlot.date, 'yyyy-MM-dd')
@@ -113,7 +113,7 @@ export default function AgendaFormDialog({
   };
 
   const handleDeleteClick = async () => {
-    if (!consulta || !await confirmDialog({ description: 'Deseja realmente excluir esta consulta?' })) return;
+    if (!consulta || !await confirmDialog({ description: 'Deseja realmente excluir este agendamento?' })) return;
     setDeleting(true);
     await onDelete(consulta.id);
     setDeleting(false);
@@ -128,7 +128,7 @@ export default function AgendaFormDialog({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">
-            {consulta ? 'Editar Consulta' : 'Nova Consulta'}
+            {consulta ? 'Editar Agendamento' : 'Novo Agendamento'}
           </h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
             <X size={18} />
@@ -136,15 +136,15 @@ export default function AgendaFormDialog({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Paciente */}
+          {/* Cliente */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Paciente</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Cliente</label>
             <select
               value={formData.paciente_id}
               onChange={e => setFormData(prev => ({ ...prev, paciente_id: e.target.value }))}
               className="dental-input"
             >
-              <option value="">Selecione um paciente</option>
+              <option value="">Selecione um cliente</option>
               {pacientes.map(p => (
                 <option key={p.id} value={p.id}>{p.nome}</option>
               ))}
@@ -162,7 +162,7 @@ export default function AgendaFormDialog({
             >
               <option value="">Selecione o {labelProfissional.toLowerCase()}</option>
               {profissionais.map(d => (
-                <option key={d.id} value={d.id}>{isOdontologia ? 'Dr(a). ' : ''}{d.nome}</option>
+                <option key={d.id} value={d.id}>{d.nome}</option>
               ))}
             </select>
           </div>
@@ -236,7 +236,7 @@ export default function AgendaFormDialog({
               value={formData.tipo_procedimento}
               onChange={e => setFormData(prev => ({ ...prev, tipo_procedimento: e.target.value }))}
               className="dental-input"
-              placeholder="Ex: Limpeza, Restauração, Avaliação"
+              placeholder="Ex: Reunião, Consultoria, Avaliação"
               required
             />
           </div>
@@ -271,7 +271,7 @@ export default function AgendaFormDialog({
               value={formData.observacoes}
               onChange={e => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
               className="dental-input min-h-[72px] resize-none"
-              placeholder="Anotações sobre a consulta..."
+              placeholder="Anotações sobre o agendamento..."
             />
           </div>
 

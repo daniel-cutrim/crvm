@@ -270,10 +270,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { title: 'Consultas Hoje', value: kpis.consultasHoje, sub: `${kpis.compareceram} compareceram · ${kpis.faltaram} faltaram`, icon: CalendarIcon, accent: 'bg-sky-50 text-sky-600' },
+          { title: 'Agendamentos Hoje', value: kpis.consultasHoje, sub: `${kpis.compareceram} compareceram · ${kpis.faltaram} faltaram`, icon: CalendarIcon, accent: 'bg-sky-50 text-sky-600' },
           { title: `Faturamento (${periodoLabel})`, value: formatCurrency(kpis.faturamentoPeriodo), sub: `Recebido: ${formatCurrency(kpis.recebidoPeriodo)}`, icon: DollarSign, accent: 'bg-teal-50 text-teal-600' },
           { title: `Lucro (${periodoLabel})`, value: formatCurrency(kpis.lucro), sub: `Despesas: ${formatCurrency(kpis.despesasPeriodo)}`, icon: TrendingUp, accent: kpis.lucro >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600' },
-          { title: 'Pacientes Ativos', value: kpis.pacientesAtivos, sub: `${kpis.leadsNovos} leads novos no período`, icon: Users, accent: 'bg-violet-50 text-violet-600' },
+          { title: 'Clientes Ativos', value: kpis.pacientesAtivos, sub: `${kpis.leadsNovos} leads novos no período`, icon: Users, accent: 'bg-violet-50 text-violet-600' },
         ].map((s, i) => (
           <Card key={i} className="overflow-hidden">
             <CardContent className="p-4">
@@ -525,7 +525,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <FileText className="h-6 w-6 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm font-medium">Orçamentos Aprovados</p>
+              <p className="text-sm font-medium">Propostas Aprovadas</p>
               <p className="text-2xl font-bold tabular-nums">{kpis.orcAprovados}</p>
             </div>
           </CardContent>
@@ -546,7 +546,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             {consultasHojeList.length === 0 ? (
               <div className="py-10 text-center text-muted-foreground">
                 <CalendarIcon className="mx-auto mb-2 opacity-30 h-8 w-8" />
-                <p className="text-sm">Nenhuma consulta hoje</p>
+                <p className="text-sm">Nenhum agendamento hoje</p>
               </div>
             ) : (
               <ul className="divide-y">
@@ -554,7 +554,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <li key={c.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
                     {statusIcon(c.status)}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{c.paciente?.nome || c.lead?.nome || 'Paciente'}</p>
+                      <p className="text-sm font-medium truncate">{c.paciente?.nome || c.lead?.nome || 'Cliente'}</p>
                       <p className="text-xs text-muted-foreground">{c.tipo_procedimento}{c.sala ? ` · Sala ${c.sala}` : ''}</p>
                     </div>
                     <div className="text-right shrink-0">

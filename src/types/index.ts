@@ -207,7 +207,6 @@ export interface Clinica {
   cor_primaria: string | null;
   cor_secundaria: string | null;
   dominio: string | null;
-  tipo_especialidade: string | null;
   created_at: string;
 }
 

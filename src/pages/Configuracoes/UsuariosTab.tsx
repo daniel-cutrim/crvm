@@ -19,7 +19,7 @@ import { isProfissional } from '@/utils/roles';
 export default function UsuariosTab() {
   const { usuarios, loading, addUsuario, updateUsuario } = useUsuarios();
   const { usuario } = useAuth();
-  const { isOdontologia, labelProfissional } = useClinicaConfig();
+  const { labelProfissional } = useClinicaConfig();
   
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Usuario | null>(null);
@@ -126,9 +126,7 @@ export default function UsuariosTab() {
     else toast.success(u.ativo ? 'Usuário desativado' : 'Usuário ativado');
   };
 
-  const papeisDisponiveis = isOdontologia 
-    ? ['Gestor', 'Dentista', 'Gestor/Dentista', 'Recepção']
-    : ['Gestor', 'Profissional', 'Gestor/Profissional', 'Recepção'];
+  const papeisDisponiveis = ['Gestor', 'Profissional', 'Gestor/Profissional', 'Recepção'];
 
   const papelColor = (p: string) => {
     if (p === 'Gestor') return 'bg-primary/10 text-primary border-primary/20';
@@ -266,7 +264,7 @@ export default function UsuariosTab() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Permite sincronização bidirecional de consultas usando a conta deste {labelProfissional.toLowerCase()}.
+                  Permite sincronização bidirecional de agendamentos usando a conta deste {labelProfissional.toLowerCase()}.
                 </p>
               </div>
             )}

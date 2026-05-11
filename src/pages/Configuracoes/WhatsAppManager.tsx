@@ -131,7 +131,7 @@ export default function WhatsAppManager() {
               WhatsApp
             </CardTitle>
             <CardDescription className="mt-1">
-              Gerencie a conexão do WhatsApp da sua clínica.
+              Gerencie a conexão do WhatsApp da sua empresa.
             </CardDescription>
           </div>
 

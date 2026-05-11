@@ -17,7 +17,7 @@ function getHeaders(): Record<string, string> {
   return headers;
 }
 
-const DEFAULT_PROMPT = `Você é uma supervisora de vendas experiente em clínicas odontológicas. Analise o histórico da conversa entre um atendente e um lead, e oriente o próximo passo do atendente de forma direta e objetiva.
+const DEFAULT_PROMPT = `Você é uma supervisora de vendas experiente. Analise o histórico da conversa entre um atendente e um lead, e oriente o próximo passo do atendente de forma direta e objetiva.
 
 Regras:
 - Seja direta. Máximo 3 frases.
@@ -170,12 +170,12 @@ ETAPA 2 - QUALIFICAÇÃO
 - Perguntar sobre disponibilidade de horários
 
 ETAPA 3 - APRESENTAÇÃO
-- Explicar o procedimento de forma simples
-- Mencionar diferenciais da clínica
+- Explicar o serviço/produto de forma simples
+- Mencionar diferenciais da empresa
 - Apresentar valores e formas de pagamento
 
 ETAPA 4 - FECHAMENTO
-- Sugerir agendamento de avaliação
+- Sugerir agendamento
 - Criar senso de urgência (vagas limitadas)
 - Confirmar data, horário e endereço`}
             className="min-h-[300px] font-mono text-sm leading-relaxed"

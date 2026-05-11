@@ -263,7 +263,7 @@ export default function TarefasPage() {
                       )}
                       {t.paciente && (
                         <Badge variant="outline" className="text-xs">
-                          Paciente: {t.paciente.nome}
+                          Cliente: {t.paciente.nome}
                         </Badge>
                       )}
                       {t.lead && (
@@ -342,7 +342,7 @@ export default function TarefasPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Paciente (opcional)</Label>
+                <Label>Cliente (opcional)</Label>
                 <Select value={form.paciente_id || 'none'} onValueChange={v => setForm(f => ({ ...f, paciente_id: v === 'none' ? '' : v }))}>
                   <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                   <SelectContent>

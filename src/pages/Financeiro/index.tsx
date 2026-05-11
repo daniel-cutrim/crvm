@@ -256,7 +256,7 @@ export default function FinanceiroPage() {
 
   const receitaExportColumns = [
     { header: 'Data', accessor: (r: Receita) => format(parseISO(r.data), 'dd/MM/yyyy') },
-    { header: 'Paciente', accessor: (r: Receita) => r.paciente?.nome || '' },
+    { header: 'Cliente', accessor: (r: Receita) => r.paciente?.nome || '' },
     { header: 'Procedimento', accessor: (r: Receita) => r.procedimento || '' },
     { header: 'Forma Pagamento', accessor: (r: Receita) => r.forma_pagamento },
     { header: 'Valor', accessor: (r: Receita) => fmt(Number(r.valor)) },
@@ -469,7 +469,7 @@ export default function FinanceiroPage() {
                 {monthReceitas.filter(r => r.status !== 'Pago').map(r => (
                   <div key={r.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 text-xs">
                     <div>
-                      <p className="font-medium text-foreground">{r.paciente?.nome || 'Paciente'}</p>
+                      <p className="font-medium text-foreground">{r.paciente?.nome || 'Cliente'}</p>
                       <p className="text-muted-foreground">{r.procedimento || 'Sem procedimento'}</p>
                     </div>
                     <div className="text-right">
@@ -565,7 +565,7 @@ export default function FinanceiroPage() {
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Data</th>
-                <th className="text-left p-3 text-xs font-medium text-muted-foreground">Paciente</th>
+                <th className="text-left p-3 text-xs font-medium text-muted-foreground">Cliente</th>
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Procedimento</th>
                 <th className="text-left p-3 text-xs font-medium text-muted-foreground">Pagamento</th>
                 <th className="text-right p-3 text-xs font-medium text-muted-foreground">Valor</th>

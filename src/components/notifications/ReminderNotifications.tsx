@@ -38,23 +38,21 @@ function buildWhatsAppUrl(phone: string, message: string): string {
   return `https://wa.me/${fullNumber}?text=${encodeURIComponent(message)}`;
 }
 
-function buildReminderMessage(consulta: Consulta, type: '24h' | '1h', clinicaNome: string, isOdontologia: boolean, labelProfissional: string): string {
+function buildReminderMessage(consulta: Consulta, type: '24h' | '1h', clinicaNome: string, labelProfissional: string): string {
   const dataHora = parseISO(consulta.data_hora);
   const dataFormatada = format(dataHora, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   const procedimento = consulta.tipo_procedimento;
   const profissional = consulta.dentista?.nome || `seu ${labelProfissional.toLowerCase()}`;
-  const procEmoji = isOdontologia ? '🦷' : '📌';
-  const prefix = isOdontologia ? 'Dr(a). ' : '';
 
   if (type === '24h') {
-    return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! 😊\n\nLembramos que você tem uma consulta agendada para *amanhã*:\n\n📅 ${dataFormatada}\n${procEmoji} ${procedimento}\n👨‍⚕️ ${prefix}${profissional}\n\nPor favor, confirme sua presença respondendo esta mensagem.\n\n${clinicaNome}`;
+    return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! 😊\n\nLembramos que você tem um compromisso agendado para *amanhã*:\n\n📅 ${dataFormatada}\n📌 ${procedimento}\n👤 ${profissional}\n\nPor favor, confirme sua presença respondendo esta mensagem.\n\n${clinicaNome}`;
   }
-  return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! ⏰\n\nSua consulta é *daqui a 1 hora*:\n\n📅 ${dataFormatada}\n${procEmoji} ${procedimento}\n👨‍⚕️ ${prefix}${profissional}\n\nEstamos te esperando! 😄\n\n${clinicaNome}`;
+  return `Olá${consulta.paciente?.nome ? `, ${consulta.paciente.nome.split(' ')[0]}` : ''}! ⏰\n\nSeu compromisso é *daqui a 1 hora*:\n\n📅 ${dataFormatada}\n📌 ${procedimento}\n👤 ${profissional}\n\nEstamos te esperando! 😄\n\n${clinicaNome}`;
 }
 
 export default function ReminderNotifications({ consultas, tarefas }: ReminderNotificationsProps) {
   const { usuario } = useAuth();
-  const { isOdontologia, labelProfissional } = useClinicaConfig();
+  const { labelProfissional } = useClinicaConfig();
   const clinicaNome = usuario?.clinica?.nome || 'MedROI';
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -160,7 +158,7 @@ export default function ReminderNotifications({ consultas, tarefas }: ReminderNo
             }`}
           >
             <CalendarClock size={13} />
-            Consultas
+            Agendamentos
             {reminders.length > 0 && (
               <span className={`min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[10px] font-bold ${
                 activeTab === 'consultas' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
@@ -200,14 +198,14 @@ export default function ReminderNotifications({ consultas, tarefas }: ReminderNo
                   </div>
                   <p className="text-sm font-medium text-muted-foreground">Nenhum lembrete pendente</p>
                   <p className="text-xs text-muted-foreground/60 mt-1 max-w-[200px] mx-auto">
-                    Lembretes aparecem automaticamente 24h e 1h antes das consultas
+                    Lembretes aparecem automaticamente 24h e 1h antes dos agendamentos
                   </p>
                 </div>
               ) : (
                 <div className="p-2 space-y-1.5">
                   {reminders.map(({ consulta, type, hoursUntil, minutesUntil }) => {
                     const phone = consulta.paciente?.whatsapp || consulta.paciente?.telefone || consulta.lead?.telefone;
-                    const message = buildReminderMessage(consulta, type, clinicaNome, isOdontologia, labelProfissional);
+                    const message = buildReminderMessage(consulta, type, clinicaNome, labelProfissional);
                     const whatsappUrl = buildWhatsAppUrl(phone!, message);
                     const dataHora = parseISO(consulta.data_hora);
                     const isUrgent = type === '1h';
@@ -252,7 +250,7 @@ export default function ReminderNotifications({ consultas, tarefas }: ReminderNo
                             </div>
 
                             <p className="text-sm font-semibold text-foreground truncate">
-                              {consulta.paciente?.nome || consulta.lead?.nome || 'Paciente'}
+                              {consulta.paciente?.nome || consulta.lead?.nome || 'Cliente'}
                             </p>
                             <p className="text-[11px] text-muted-foreground mt-0.5">
                               {format(dataHora, "dd/MM 'às' HH:mm", { locale: ptBR })} · {consulta.tipo_procedimento}
@@ -352,7 +350,7 @@ export default function ReminderNotifications({ consultas, tarefas }: ReminderNo
                               )}
                               {tarefa.paciente && (
                                 <span className="text-[11px] text-primary font-medium">
-                                  {isOdontologia ? '🦷' : '👤'} {tarefa.paciente.nome}
+                                  👤 {tarefa.paciente.nome}
                                 </span>
                               )}
                               {tarefa.lead && (

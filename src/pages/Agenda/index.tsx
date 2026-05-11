@@ -88,17 +88,17 @@ export default function AgendaPage() {
     if (editingConsulta) {
       const { error } = await updateConsulta(editingConsulta.id, data);
       if (error) {
-        toast.error('Erro ao atualizar consulta: ' + error.message);
+        toast.error('Erro ao atualizar agendamento: ' + error.message);
         return;
       }
-      toast.success('Consulta atualizada com sucesso');
+      toast.success('Agendamento atualizado com sucesso');
     } else {
       const { error } = await addConsulta(data);
       if (error) {
-        toast.error('Erro ao agendar consulta: ' + error.message);
+        toast.error('Erro ao criar agendamento: ' + error.message);
         return;
       }
-      toast.success('Consulta agendada com sucesso');
+      toast.success('Agendamento criado com sucesso');
     }
     await fetchAgenda();
     setDialogOpen(false);
@@ -145,8 +145,8 @@ export default function AgendaPage() {
           <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {todayStats.total > 0
-              ? `Hoje: ${todayStats.total} consulta${todayStats.total > 1 ? 's' : ''} · ${todayStats.confirmadas} confirmada${todayStats.confirmadas !== 1 ? 's' : ''}`
-              : 'Nenhuma consulta agendada para hoje'}
+              ? `Hoje: ${todayStats.total} agendamento${todayStats.total > 1 ? 's' : ''} · ${todayStats.confirmadas} confirmado${todayStats.confirmadas !== 1 ? 's' : ''}`
+              : 'Nenhum agendamento para hoje'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -169,7 +169,7 @@ export default function AgendaPage() {
               hover:opacity-90 transition-opacity active:scale-[0.97]"
           >
             <Plus size={16} />
-            Nova Consulta
+            Novo Agendamento
           </button>
         </div>
       </div>

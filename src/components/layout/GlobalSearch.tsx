@@ -97,9 +97,9 @@ export default function GlobalSearch({ onNavigate }: Props) {
   };
 
   const labelMap = {
-    paciente: 'Paciente',
+    paciente: 'Cliente',
     lead: 'Lead',
-    consulta: 'Consulta',
+    consulta: 'Agendamento',
   };
 
   return (
@@ -107,7 +107,7 @@ export default function GlobalSearch({ onNavigate }: Props) {
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
       <input
         type="text"
-        placeholder="Buscar pacientes, consultas..."
+        placeholder="Buscar clientes, agendamentos..."
         className="dental-input pl-9 py-2 text-sm w-full"
         value={query}
         onChange={e => { setQuery(e.target.value); setOpen(true); }}

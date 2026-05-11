@@ -66,7 +66,7 @@ export default function VariaveisClinica() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg text-primary">
           <Database className="h-5 w-5" />
-          Variáveis da Clínica
+          Variáveis da Empresa
         </CardTitle>
         <CardDescription>
           Utilize estes IDs ao configurar integrações externas (Zapier, Make, RD Station, webhooks) para direcionar leads aos fluxos corretos.
@@ -76,13 +76,13 @@ export default function VariaveisClinica() {
         {/* Clinica ID */}
         <div className="flex items-end gap-3 p-3 bg-background rounded-md border shadow-sm">
           <div className="flex-1 space-y-1">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">ID da Clínica (clinica_id)</Label>
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">ID da Empresa (clinica_id)</Label>
             <Input readOnly value={usuario?.clinica_id || ''} className="font-mono text-xs text-muted-foreground bg-muted/50" />
           </div>
           <Button 
             variant="secondary" 
             size="icon" 
-            onClick={() => copyToClipboard(usuario?.clinica_id, 'ID da Clínica')}
+            onClick={() => copyToClipboard(usuario?.clinica_id, 'ID da Empresa')}
             title="Copiar clinica_id"
           >
             <Copy className="h-4 w-4" />

@@ -9,6 +9,20 @@ import { toast } from 'sonner';
 import { ChevronDown, Trophy, XCircle } from 'lucide-react';
 import type { FunilEtapa } from '@/types';
 
+const MOTIVOS_PERDA = [
+  'Achou caro',
+  'Está sem dinheiro',
+  'Sem tempo',
+  'Vai se planejar',
+  'Adiou',
+  'Descrença em si',
+  'Descrença no método',
+  'Foi para concorrente',
+  'Não respondeu mais',
+  'Desistiu',
+  'Outro',
+];
+
 // Fallback stages when no dynamic funnel is configured
 const ETAPAS_FALLBACK = [
   { id: 'fallback-1', nome: 'Novo Lead', cor: '#3b82f6', ordem: 1 },
@@ -42,6 +56,7 @@ export default function ContactStatusTag({ leadId, pacienteId }: Props) {
   // Loss reason dialog
   const [lossDialogOpen, setLossDialogOpen] = useState(false);
   const [motivoPerda, setMotivoPerda] = useState('');
+  const [motivoOutro, setMotivoOutro] = useState('');
   const [savingLoss, setSavingLoss] = useState(false);
 
   // Fetch lead data
@@ -133,12 +148,14 @@ export default function ContactStatusTag({ leadId, pacienteId }: Props) {
   function handlePerdidoClick() {
     setOpen(false);
     setMotivoPerda('');
+    setMotivoOutro('');
     setLossDialogOpen(true);
   }
 
   async function handleConfirmPerda() {
-    if (!motivoPerda.trim()) {
-      toast.error('Informe o motivo da perda');
+    const finalMotivo = motivoPerda === 'Outro' ? motivoOutro.trim() : motivoPerda;
+    if (!finalMotivo) {
+      toast.error('Selecione o motivo da perda');
       return;
     }
     if (!leadId) return;
@@ -146,7 +163,7 @@ export default function ContactStatusTag({ leadId, pacienteId }: Props) {
     const { error } = await supabase.from('leads')
       .update({
         resultado: 'perdido',
-        motivo_perda: motivoPerda.trim(),
+        motivo_perda: finalMotivo,
         resultado_at: new Date().toISOString(),
       } as Record<string, unknown>)
       .eq('id', leadId);
@@ -254,21 +271,39 @@ export default function ContactStatusTag({ leadId, pacienteId }: Props) {
             <DialogHeader>
               <DialogTitle>Motivo da Perda</DialogTitle>
               <DialogDescription>
-                Informe o motivo pelo qual este lead foi perdido. Essa informação será registrada no banco e refletida no Dashboard.
+                Selecione o motivo pelo qual este lead foi perdido.
               </DialogDescription>
             </DialogHeader>
-            <Textarea
-              placeholder="Ex: Preço alto, foi para concorrente, desistiu do tratamento..."
-              value={motivoPerda}
-              onChange={e => setMotivoPerda(e.target.value)}
-              className="min-h-[100px]"
-            />
+            <div className="space-y-2 py-2">
+              {MOTIVOS_PERDA.map(motivo => (
+                <button
+                  key={motivo}
+                  onClick={() => setMotivoPerda(motivo)}
+                  className={`w-full text-left px-3 py-2 text-sm rounded-lg border transition-colors ${
+                    motivoPerda === motivo
+                      ? 'border-red-400 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 font-medium'
+                      : 'border-border hover:bg-muted/50 text-foreground'
+                  }`}
+                >
+                  {motivo}
+                </button>
+              ))}
+              {motivoPerda === 'Outro' && (
+                <Textarea
+                  placeholder="Descreva o motivo..."
+                  value={motivoOutro}
+                  onChange={e => setMotivoOutro(e.target.value)}
+                  className="mt-2 min-h-[80px]"
+                  autoFocus
+                />
+              )}
+            </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setLossDialogOpen(false)}>Cancelar</Button>
               <Button
                 variant="destructive"
                 onClick={handleConfirmPerda}
-                disabled={savingLoss || !motivoPerda.trim()}
+                disabled={savingLoss || !motivoPerda || (motivoPerda === 'Outro' && !motivoOutro.trim())}
               >
                 {savingLoss ? 'Salvando...' : 'Confirmar Perda'}
               </Button>

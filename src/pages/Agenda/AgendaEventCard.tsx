@@ -22,8 +22,8 @@ interface Props {
 export default function AgendaEventCard({ consulta, onClick, compact }: Props) {
   const time = format(parseAppointmentDateTime(consulta.data_hora), 'HH:mm');
   const style = consulta.is_google ? STATUS_STYLES.Google : (STATUS_STYLES[consulta.status] || STATUS_STYLES.Agendada);
-  const nome = consulta.is_google ? consulta.tipo_procedimento : (consulta.paciente?.nome || consulta.lead?.nome || 'Paciente');
-  const { isOdontologia } = useClinicaConfig();
+  const nome = consulta.is_google ? consulta.tipo_procedimento : (consulta.paciente?.nome || consulta.lead?.nome || 'Cliente');
+
 
   return (
     <button
@@ -39,7 +39,7 @@ export default function AgendaEventCard({ consulta, onClick, compact }: Props) {
       {!compact && !consulta.is_google && (
         <p className="text-[10px] opacity-70 truncate mt-0.5">
           {consulta.tipo_procedimento}
-          {consulta.dentista ? ` · ${isOdontologia ? 'Dr. ' : ''}${consulta.dentista.nome.split(' ')[0]}` : ''}
+          {consulta.dentista ? ` · ${consulta.dentista.nome.split(' ')[0]}` : ''}
         </p>
       )}
     </button>

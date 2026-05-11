@@ -138,7 +138,6 @@ export default function ClinicaTab() {
     telefone: '',
     email: '',
     logo_url: '',
-    tipo_especialidade: 'odontologia',
     cor_primaria: '199 89% 38%',
     cor_secundaria: '199 89% 28%',
   });
@@ -152,7 +151,6 @@ export default function ClinicaTab() {
         telefone: clinica.telefone || '',
         email: clinica.email || '',
         logo_url: clinica.logo_url || '',
-        tipo_especialidade: clinica.tipo_especialidade || 'odontologia',
         cor_primaria: clinica.cor_primaria || '199 89% 38%',
         cor_secundaria: clinica.cor_secundaria || '199 89% 28%',
       });
@@ -198,7 +196,7 @@ export default function ClinicaTab() {
 
   const handleSave = async () => {
     if (!form.nome.trim()) {
-      toast.error('Nome da clínica é obrigatório');
+      toast.error('Nome da empresa é obrigatório');
       return;
     }
     setSaving(true);
@@ -216,10 +214,10 @@ export default function ClinicaTab() {
           throw error;
         }
       }
-      toast.success('Dados da clínica salvos com sucesso');
+      toast.success('Dados da empresa salvos com sucesso');
     } catch (err: any) {
       console.error('[ClinicaTab] Detalhes do erro:', err);
-      toast.error(err?.message || 'Erro ao salvar dados da clínica');
+      toast.error(err?.message || 'Erro ao salvar dados da empresa');
     }
     setSaving(false);
   };
@@ -233,13 +231,13 @@ export default function ClinicaTab() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Building2 className="h-5 w-5 text-primary" />
-          Dados da Clínica
+          Dados da Empresa
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="nome">Nome da Clínica *</Label>
+            <Label htmlFor="nome">Nome da Empresa *</Label>
             <Input id="nome" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="MedROI" />
           </div>
           <div className="space-y-2">
@@ -254,23 +252,7 @@ export default function ClinicaTab() {
             <Label htmlFor="email">E-mail</Label>
             <Input id="email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="contato@clinica.com" />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="tipo_especialidade">Tipo de Clínica</Label>
-            <Select value={form.tipo_especialidade} onValueChange={v => setForm(f => ({ ...f, tipo_especialidade: v }))} disabled>
-              <SelectTrigger id="tipo_especialidade">
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="odontologia">Odontológica</SelectItem>
-                <SelectItem value="medicina">Médica / Geral</SelectItem>
-                <SelectItem value="estetica">Estética</SelectItem>
-                <SelectItem value="psicologia">Psicologia</SelectItem>
-                <SelectItem value="fisioterapia">Fisioterapia</SelectItem>
-                <SelectItem value="outros">Outros</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-muted-foreground mt-1">O tipo de clínica foi definido no cadastro e não pode ser alterado.</p>
-          </div>
+
           <div className="md:col-span-2 space-y-2">
             <Label htmlFor="endereco">Endereço</Label>
             <Input id="endereco" value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} placeholder="Rua, número, bairro, cidade - UF" />

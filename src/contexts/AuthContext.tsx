@@ -9,7 +9,6 @@ export interface Clinica {
   cor_primaria?: string;
   cor_secundaria?: string;
   dominio?: string;
-  tipo_especialidade?: string;
 }
 
 export interface Usuario {

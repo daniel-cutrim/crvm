@@ -20,7 +20,7 @@ export default function IntegracoesTab() {
       {/* WhatsApp / UZAPI Management */}
       <WhatsAppManager />
 
-      {/* Variáveis da Clínica para Integrações */}
+      {/* Variáveis da Empresa para Integrações */}
       <VariaveisClinica />
 
       {/* Meta Ads / Facebook - Em Breve */}

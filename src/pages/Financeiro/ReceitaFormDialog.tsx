@@ -71,7 +71,7 @@ export default function ReceitaFormDialog({ open, onClose, onSave, onDelete, rec
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Paciente *</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Cliente *</label>
             <select value={form.paciente_id} onChange={e => setForm(p => ({ ...p, paciente_id: e.target.value }))} className="dental-input" required>
               <option value="">Selecione</option>
               {pacientes.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
