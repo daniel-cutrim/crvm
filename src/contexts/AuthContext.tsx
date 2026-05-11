@@ -21,6 +21,7 @@ export interface Usuario {
   ativo: boolean;
   clinica_id?: string;
   clinica?: Clinica;
+  tema?: 'light' | 'dark';
 }
 
 interface AuthContextType {

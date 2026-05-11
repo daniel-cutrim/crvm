@@ -1,16 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Trophy, XCircle } from 'lucide-react';
+import type { FunilEtapa } from '@/types';
 
-const ETAPAS_FUNIL = [
-  { value: 'Novo Lead', color: 'bg-blue-500/15 text-blue-700 border-blue-300' },
-  { value: 'Em Contato', color: 'bg-yellow-500/15 text-yellow-700 border-yellow-300' },
-  { value: 'Avaliação marcada', color: 'bg-purple-500/15 text-purple-700 border-purple-300' },
-  { value: 'Orçamento aprovado', color: 'bg-green-500/15 text-green-700 border-green-300' },
-  { value: 'Orçamento perdido', color: 'bg-red-500/15 text-red-700 border-red-300' },
+// Fallback stages when no dynamic funnel is configured
+const ETAPAS_FALLBACK = [
+  { id: 'fallback-1', nome: 'Novo Lead', cor: '#3b82f6', ordem: 1 },
+  { id: 'fallback-2', nome: 'Em Contato', cor: '#eab308', ordem: 2 },
+  { id: 'fallback-3', nome: 'Avaliação marcada', cor: '#8b5cf6', ordem: 3 },
+  { id: 'fallback-4', nome: 'Orçamento aprovado', cor: '#22c55e', ordem: 4 },
+  { id: 'fallback-5', nome: 'Orçamento perdido', cor: '#ef4444', ordem: 5 },
 ];
 
 const PACIENTE_STATUS = [
@@ -27,16 +32,36 @@ interface Props {
 
 export default function ContactStatusTag({ leadId, pacienteId }: Props) {
   const [etapa, setEtapa] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<string | null>(null);
+  const [funilId, setFunilId] = useState<string | null>(null);
   const [pacienteStatus, setPacienteStatus] = useState<string | null>(null);
+  const [etapas, setEtapas] = useState<{ id: string; nome: string; cor: string; ordem: number }[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Loss reason dialog
+  const [lossDialogOpen, setLossDialogOpen] = useState(false);
+  const [motivoPerda, setMotivoPerda] = useState('');
+  const [savingLoss, setSavingLoss] = useState(false);
+
+  // Fetch lead data
   useEffect(() => {
     if (leadId) {
-      supabase.from('leads').select('etapa_funil').eq('id', leadId).single()
-        .then(({ data }) => { if (data) setEtapa(data.etapa_funil); });
+      supabase.from('leads')
+        .select('etapa_funil, funil_id, resultado')
+        .eq('id', leadId)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            setEtapa(data.etapa_funil);
+            setFunilId(data.funil_id || null);
+            setResultado(data.resultado || null);
+          }
+        });
     } else {
       setEtapa(null);
+      setFunilId(null);
+      setResultado(null);
     }
     if (pacienteId) {
       supabase.from('pacientes').select('status').eq('id', pacienteId).single()
@@ -46,18 +71,93 @@ export default function ContactStatusTag({ leadId, pacienteId }: Props) {
     }
   }, [leadId, pacienteId]);
 
+  // Load dynamic funnel stages
+  const loadEtapas = useCallback(async () => {
+    if (funilId) {
+      const { data } = await supabase
+        .from('funil_etapas')
+        .select('*')
+        .eq('funil_id', funilId)
+        .order('ordem', { ascending: true });
+      if (data && data.length > 0) {
+        setEtapas(data.map(e => ({
+          id: e.id,
+          nome: e.nome,
+          cor: e.cor || '#6b7280',
+          ordem: e.ordem,
+        })));
+        return;
+      }
+    }
+    setEtapas(ETAPAS_FALLBACK);
+  }, [funilId]);
+
+  useEffect(() => { loadEtapas(); }, [loadEtapas]);
+
   async function updateLeadEtapa(newEtapa: string) {
     if (!leadId) return;
     setLoading(true);
-    const { error } = await supabase.from('leads').update({ etapa_funil: newEtapa }).eq('id', leadId);
+    const { error } = await supabase.from('leads')
+      .update({ etapa_funil: newEtapa } as Record<string, unknown>)
+      .eq('id', leadId);
     if (error) {
       toast.error('Erro ao atualizar etapa');
     } else {
       setEtapa(newEtapa);
+      setResultado(null);
       toast.success(`Etapa alterada para "${newEtapa}"`);
     }
     setLoading(false);
     setOpen(false);
+  }
+
+  async function handleGanho() {
+    if (!leadId) return;
+    setLoading(true);
+    const { error } = await supabase.from('leads')
+      .update({
+        resultado: 'ganho',
+        resultado_at: new Date().toISOString(),
+      } as Record<string, unknown>)
+      .eq('id', leadId);
+    if (error) {
+      toast.error('Erro ao registrar ganho');
+    } else {
+      setResultado('ganho');
+      toast.success('🏆 Lead marcado como GANHO!');
+    }
+    setLoading(false);
+    setOpen(false);
+  }
+
+  function handlePerdidoClick() {
+    setOpen(false);
+    setMotivoPerda('');
+    setLossDialogOpen(true);
+  }
+
+  async function handleConfirmPerda() {
+    if (!motivoPerda.trim()) {
+      toast.error('Informe o motivo da perda');
+      return;
+    }
+    if (!leadId) return;
+    setSavingLoss(true);
+    const { error } = await supabase.from('leads')
+      .update({
+        resultado: 'perdido',
+        motivo_perda: motivoPerda.trim(),
+        resultado_at: new Date().toISOString(),
+      } as Record<string, unknown>)
+      .eq('id', leadId);
+    if (error) {
+      toast.error('Erro ao registrar perda');
+    } else {
+      setResultado('perdido');
+      toast.success('Lead marcado como PERDIDO');
+    }
+    setSavingLoss(false);
+    setLossDialogOpen(false);
   }
 
   async function updatePacienteStatus(newStatus: string) {
@@ -74,35 +174,108 @@ export default function ContactStatusTag({ leadId, pacienteId }: Props) {
     setOpen(false);
   }
 
-  // Lead tag
+  // Lead tag with dynamic stages + GANHO/PERDIDO
   if (leadId && etapa) {
-    const current = ETAPAS_FUNIL.find(e => e.value === etapa);
+    const currentEtapa = etapas.find(e => e.nome === etapa);
+    const bgColor = resultado === 'ganho'
+      ? '#22c55e'
+      : resultado === 'perdido'
+      ? '#ef4444'
+      : (currentEtapa?.cor || '#6b7280');
+
+    const label = resultado === 'ganho'
+      ? '🏆 GANHO'
+      : resultado === 'perdido'
+      ? '❌ PERDIDO'
+      : etapa;
+
     return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold cursor-pointer transition-colors hover:opacity-80 ${current?.color || 'bg-muted text-muted-foreground border-border'}`}
-            disabled={loading}
-          >
-            {etapa}
-            <ChevronDown size={12} />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-48 p-1" align="end">
-          <p className="text-xs font-medium text-muted-foreground px-2 py-1">Etapa do Funil</p>
-          {ETAPAS_FUNIL.map(e => (
+      <>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
             <button
-              key={e.value}
-              onClick={() => updateLeadEtapa(e.value)}
-              className={`w-full text-left px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors ${etapa === e.value ? 'font-bold' : ''}`}
+              className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold cursor-pointer transition-colors hover:opacity-80"
+              style={{
+                backgroundColor: `${bgColor}20`,
+                color: bgColor,
+                borderColor: `${bgColor}50`,
+              }}
               disabled={loading}
             >
-              <span className={`inline-block w-2 h-2 rounded-full mr-2 ${e.color.split(' ')[0].replace('/15', '')}`} />
-              {e.value}
+              {label}
+              <ChevronDown size={12} />
             </button>
-          ))}
-        </PopoverContent>
-      </Popover>
+          </PopoverTrigger>
+          <PopoverContent className="w-52 p-1" align="end">
+            <p className="text-xs font-medium text-muted-foreground px-2 py-1">Etapa do Funil</p>
+            {etapas.map(e => (
+              <button
+                key={e.id}
+                onClick={() => updateLeadEtapa(e.nome)}
+                className={`w-full text-left px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors ${
+                  etapa === e.nome && !resultado ? 'font-bold' : ''
+                }`}
+                disabled={loading}
+              >
+                <span
+                  className="inline-block w-2 h-2 rounded-full mr-2"
+                  style={{ backgroundColor: e.cor }}
+                />
+                {e.nome}
+              </button>
+            ))}
+
+            <div className="border-t my-1" />
+            <p className="text-xs font-medium text-muted-foreground px-2 py-1">Resultado</p>
+            <button
+              onClick={handleGanho}
+              className={`w-full text-left px-2 py-1.5 text-xs rounded hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors text-emerald-600 flex items-center gap-1.5 ${
+                resultado === 'ganho' ? 'font-bold bg-emerald-50 dark:bg-emerald-950/20' : ''
+              }`}
+              disabled={loading}
+            >
+              <Trophy size={12} /> GANHO
+            </button>
+            <button
+              onClick={handlePerdidoClick}
+              className={`w-full text-left px-2 py-1.5 text-xs rounded hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors text-red-600 flex items-center gap-1.5 ${
+                resultado === 'perdido' ? 'font-bold bg-red-50 dark:bg-red-950/20' : ''
+              }`}
+              disabled={loading}
+            >
+              <XCircle size={12} /> PERDIDO
+            </button>
+          </PopoverContent>
+        </Popover>
+
+        {/* Loss reason dialog */}
+        <Dialog open={lossDialogOpen} onOpenChange={setLossDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Motivo da Perda</DialogTitle>
+              <DialogDescription>
+                Informe o motivo pelo qual este lead foi perdido. Essa informação será registrada no banco e refletida no Dashboard.
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              placeholder="Ex: Preço alto, foi para concorrente, desistiu do tratamento..."
+              value={motivoPerda}
+              onChange={e => setMotivoPerda(e.target.value)}
+              className="min-h-[100px]"
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setLossDialogOpen(false)}>Cancelar</Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmPerda}
+                disabled={savingLoss || !motivoPerda.trim()}
+              >
+                {savingLoss ? 'Salvando...' : 'Confirmar Perda'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 

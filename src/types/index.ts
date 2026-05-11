@@ -67,9 +67,9 @@ export interface Lead {
   nome: string;
   telefone: string | null;
   email: string | null;
-  origem: 'Instagram' | 'Google Ads' | 'Indicação' | 'Site' | 'Facebook' | 'WhatsApp' | 'Outro' | null;
+  origem: string | null;
   interesse: string | null;
-  etapa_funil: 'Novo Lead' | 'Em Contato' | 'Avaliação marcada' | 'Orçamento aprovado' | 'Orçamento perdido';
+  etapa_funil: string;
   proxima_acao_data: string | null;
   proxima_acao_tipo: string | null;
   convertido_paciente_id: string | null;
@@ -82,6 +82,9 @@ export interface Lead {
   setor_id?: string | null;
   funil_id?: string | null;
   etapa_id?: string | null;
+  resultado?: 'ganho' | 'perdido' | null;
+  motivo_perda?: string | null;
+  resultado_at?: string | null;
   created_at: string;
 }
 
@@ -267,4 +270,13 @@ export interface FunilEtapa {
   ordem: number;
   cor: string;
   criado_em: string;
+}
+
+export interface LeadOrigem {
+  id: string;
+  clinica_id: string;
+  nome: string;
+  ativo: boolean;
+  ordem: number;
+  created_at: string;
 }

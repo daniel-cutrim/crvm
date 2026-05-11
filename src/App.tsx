@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
@@ -34,20 +35,22 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <ConfirmDialogProvider />
-        <BrowserRouter>
-          <RouteLogger />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/:page" element={<Index />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <ConfirmDialogProvider />
+          <BrowserRouter>
+            <RouteLogger />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/:page" element={<Index />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

@@ -147,11 +147,31 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     });
   }, [receitas, despesas, today]);
 
-  // ── Leads by stage ──
+  // ── Leads by stage (dynamic from actual data) ──
   const leadsByStage = useMemo(() => {
-    const stages = ['Novo Lead', 'Em Contato', 'Avaliação marcada', 'Orçamento aprovado', 'Orçamento perdido'];
-    return stages.map(s => ({ name: s, value: leads.filter(l => l.etapa_funil === s).length })).filter(s => s.value > 0);
+    const stageMap = new Map<string, number>();
+    leads.forEach(l => {
+      const stage = l.etapa_funil || 'Sem etapa';
+      stageMap.set(stage, (stageMap.get(stage) || 0) + 1);
+    });
+    return Array.from(stageMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .filter(s => s.value > 0)
+      .sort((a, b) => b.value - a.value);
   }, [leads]);
+
+  // ── Leads by origin (for new chart) ──
+  const leadsByOrigin = useMemo(() => {
+    const originMap = new Map<string, number>();
+    leads.filter(l => isInPeriodo(l.created_at)).forEach(l => {
+      const origin = l.origem || 'Sem origem';
+      originMap.set(origin, (originMap.get(origin) || 0) + 1);
+    });
+    return Array.from(originMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .filter(s => s.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [leads, isInPeriodo]);
 
   // ── Conversion rate ──
   const taxaConversao = useMemo(() => {
@@ -386,6 +406,84 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Origin Chart Row ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Leads by Origin */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Leads por Origem (período)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {leadsByOrigin.length === 0 ? (
+              <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Sem dados de origem</div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie data={leadsByOrigin} dataKey="value" innerRadius={50} outerRadius={75} paddingAngle={3} strokeWidth={0}>
+                      {leadsByOrigin.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center mt-2">
+                  {leadsByOrigin.map((s, i) => (
+                    <div key={s.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      {s.name} ({s.value})
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Resultado GANHO/PERDIDO */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Resultados de Leads (período)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const filteredLeads = leads.filter(l => isInPeriodo(l.created_at));
+              const ganhos = filteredLeads.filter(l => l.resultado === 'ganho').length;
+              const perdidos = filteredLeads.filter(l => l.resultado === 'perdido').length;
+              const emAberto = filteredLeads.filter(l => !l.resultado).length;
+              const resultData = [
+                { name: 'Ganhos', value: ganhos },
+                { name: 'Perdidos', value: perdidos },
+                { name: 'Em aberto', value: emAberto },
+              ].filter(d => d.value > 0);
+              const resColors = ['#22c55e', '#ef4444', '#a3a3a3'];
+              if (resultData.length === 0) {
+                return <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Sem dados</div>;
+              }
+              return (
+                <div className="flex flex-col items-center">
+                  <ResponsiveContainer width="100%" height={180}>
+                    <PieChart>
+                      <Pie data={resultData} dataKey="value" innerRadius={50} outerRadius={75} paddingAngle={3} strokeWidth={0}>
+                        {resultData.map((_, i) => <Cell key={i} fill={resColors[i]} />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center mt-2">
+                    {resultData.map((s, i) => (
+                      <div key={s.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: resColors[i] }} />
+                        {s.name} ({s.value})
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>

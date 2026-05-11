@@ -92,7 +92,7 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ChatFilters>(EMPTY_FILTERS);
-  const [leadMap, setLeadMap] = useState<Record<string, { etapa_funil: string; created_at: string }>>({});
+  const [leadMap, setLeadMap] = useState<Record<string, { etapa_funil: string; created_at: string; resultado: string | null }>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const selectionMode = selectedIds.size > 0;
@@ -349,11 +349,11 @@ export default function ChatPage() {
       if (leadIds.length > 0) {
         const { data: leads } = await supabase
           .from('leads')
-          .select('id, etapa_funil, created_at')
+          .select('id, etapa_funil, created_at, resultado')
           .in('id', leadIds);
         if (leads) {
-          const map: Record<string, { etapa_funil: string; created_at: string }> = {};
-          leads.forEach(l => { map[l.id] = { etapa_funil: l.etapa_funil, created_at: l.created_at || '' }; });
+          const map: Record<string, { etapa_funil: string; created_at: string; resultado: string | null }> = {};
+          leads.forEach(l => { map[l.id] = { etapa_funil: l.etapa_funil, created_at: l.created_at || '', resultado: l.resultado || null }; });
           setLeadMap(map);
         }
       }
@@ -448,6 +448,12 @@ export default function ChatPage() {
       if (!c.lead_id) return false;
       const lead = leadMap[c.lead_id];
       if (!lead || !filters.etapas.includes(lead.etapa_funil)) return false;
+    }
+
+    if (filters.resultado && filters.resultado.length > 0) {
+      if (!c.lead_id) return false;
+      const lead = leadMap[c.lead_id];
+      if (!lead || !lead.resultado || !filters.resultado.includes(lead.resultado)) return false;
     }
 
     if (filters.dataInicio || filters.dataFim) {

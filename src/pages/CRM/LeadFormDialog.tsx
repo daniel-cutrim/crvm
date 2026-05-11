@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { Lead, FunilEtapa } from '@/types';
 import { maskPhone } from '@/utils/masks';
-
-const ORIGENS = ['Instagram', 'Google Ads', 'Indicação', 'Site', 'Facebook', 'Outro'];
+import { useLeadOrigens } from '@/hooks/useLeadOrigens';
 
 interface Props {
   open: boolean;
@@ -15,6 +14,7 @@ interface Props {
 
 export default function LeadFormDialog({ open, onClose, onSave, lead, etapas = [] }: Props) {
   const [saving, setSaving] = useState(false);
+  const { origensAtivas } = useLeadOrigens();
   const [form, setForm] = useState({
     nome: '',
     telefone: '',
@@ -128,7 +128,11 @@ export default function LeadFormDialog({ open, onClose, onSave, lead, etapas = [
                 className="dental-input"
               >
                 <option value="">Selecionar</option>
-                {ORIGENS.map(o => <option key={o} value={o}>{o}</option>)}
+                {origensAtivas.map(o => <option key={o.id} value={o.nome}>{o.nome}</option>)}
+                {/* Show current origin if not in dynamic list (legacy data) */}
+                {form.origem && !origensAtivas.some(o => o.nome === form.origem) && (
+                  <option value={form.origem}>{form.origem}</option>
+                )}
               </select>
             </div>
             <div>
