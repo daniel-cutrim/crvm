@@ -340,26 +340,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </Card>
       </div>
 
-      {/* ── Quick Actions ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Novo Paciente', icon: UserPlus, color: 'text-sky-600', page: 'pacientes' },
-          { label: 'Nova Consulta', icon: CalendarIcon, color: 'text-teal-600', page: 'agenda' },
-          { label: 'Novo Lead', icon: Activity, color: 'text-violet-600', page: 'crm' },
-          { label: 'Nova Tarefa', icon: ClipboardList, color: 'text-amber-600', page: 'tarefas' },
-        ].map((a, i) => (
-          <Button key={i} variant="outline" className="h-auto py-3 flex flex-col items-center gap-1.5 hover:bg-muted/60"
-            onClick={() => onNavigate?.(a.page)}>
-            <a.icon className={`h-5 w-5 ${a.color}`} />
-            <span className="text-xs font-medium">{a.label}</span>
-          </Button>
-        ))}
-      </div>
+
 
       {/* ── Charts Row ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Revenue Chart */}
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Receitas vs Despesas (6 meses)</CardTitle>
           </CardHeader>
@@ -375,37 +361,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 <Bar dataKey="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Leads Funnel Pie */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Funil de Leads</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {leadsByStage.length === 0 ? (
-              <div className="flex items-center justify-center h-[240px] text-sm text-muted-foreground">Sem leads</div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie data={leadsByStage} dataKey="value" innerRadius={45} outerRadius={70} paddingAngle={3} strokeWidth={0}>
-                      {leadsByStage.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center mt-1">
-                  {leadsByStage.map((s, i) => (
-                    <div key={s.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      {s.name.replace('Orçamento ', 'Orç. ')} ({s.value})
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
