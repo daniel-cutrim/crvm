@@ -61,12 +61,12 @@ export default function NegocioFormDialog({ open, onClose, onSave, etapas, pesso
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Novo Negócio</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2 overflow-y-auto flex-1 pr-1">
           {/* Nome */}
           <div className="space-y-1.5">
             <Label htmlFor="neg-nome">Nome <span className="text-destructive">*</span></Label>

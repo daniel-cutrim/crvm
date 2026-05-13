@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Plus, Filter, ChevronDown, User, SortAsc, LayoutGrid, List, X, AlertTriangle,
 } from 'lucide-react';
@@ -119,10 +119,19 @@ export default function FunilPage({ onNavigate }: { onNavigate?: (p: string) => 
     [filteredLeads]
   );
 
+  const allTags = useMemo(() =>
+    [...new Set(leads.flatMap(l => l.tags || []))].sort(),
+    [leads]
+  );
+
   // Ao mover etapa — atualiza e registra histórico
-  const handleMoveEtapa = async (leadId: string, novaEtapa: FunilEtapa) => {
-    await updateLead(leadId, { etapa_funil: novaEtapa.nome, etapa_id: novaEtapa.id });
-  };
+  const handleMoveEtapa = useCallback(async (leadId: string, novaEtapa: FunilEtapa) => {
+    await updateLead(leadId, {
+      etapa_funil: novaEtapa.nome,
+      etapa_id: novaEtapa.id,
+      etapa_entrou_at: new Date().toISOString(),
+    });
+  }, [updateLead]);
 
   const handleCreateNegocio = async (data: Record<string, unknown>) => {
     try {
@@ -489,6 +498,7 @@ export default function FunilPage({ onNavigate }: { onNavigate?: (p: string) => 
           lead={detailLead}
           etapas={etapas}
           funilNome={selectedFunil?.nome || ''}
+          allTags={allTags}
           onClose={() => setDetailLead(null)}
           onUpdateLead={updateLead}
           onDelete={handleDeleteLead}

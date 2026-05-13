@@ -104,6 +104,8 @@ export interface Lead {
   pessoa_id?: string | null;
   proprietario_id?: string | null;
   valor?: number | null;
+  tags?: string[] | null;
+  etapa_entrou_at?: string | null;
   // joins
   pessoa?: Pessoa;
   proprietario?: Usuario;

@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import {
-  LayoutDashboard, Users, Calendar, Target, ClipboardList,
+  LayoutDashboard, Users, Filter, ClipboardList,
   DollarSign, CheckSquare, Settings, LogOut, Menu, X, Megaphone, MessageSquare,
   PanelLeftClose, PanelLeftOpen, Sun, Moon,
 } from 'lucide-react';
@@ -19,13 +19,12 @@ interface LayoutProps {
 
 const allMenuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
-  { id: 'agenda', label: 'Agenda', icon: Calendar, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
-  { id: 'funil', label: 'Funil', icon: Target, roles: ['Gestor', 'Recepção', 'Gestor/Profissional'] },
   { id: 'pessoas', label: 'Pessoas', icon: Users, roles: ['Gestor', 'Recepção', 'Gestor/Profissional'] },
+  { id: 'funil', label: 'Funil', icon: Filter, roles: ['Gestor', 'Recepção', 'Gestor/Profissional'] },
   { id: 'atividades', label: 'Atividades', icon: CheckSquare, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
-  { id: 'chat', label: 'Chat WhatsApp', icon: MessageSquare, roles: ['Gestor', 'Recepção', 'Gestor/Profissional'] },
-  { id: 'financeiro', label: 'Financeiro', icon: DollarSign, roles: ['Gestor', 'Gestor/Profissional'] },
+  { id: 'chat', label: 'WhatsApp', icon: MessageSquare, roles: ['Gestor', 'Recepção', 'Gestor/Profissional'] },
   { id: 'marketing', label: 'Marketing', icon: Megaphone, roles: ['Gestor', 'Gestor/Profissional'] },
+  { id: 'financeiro', label: 'Financeiro', icon: DollarSign, roles: ['Gestor', 'Gestor/Profissional'] },
   { id: 'configuracoes', label: 'Configurações', icon: Settings, roles: ['Gestor', 'Gestor/Profissional'] },
 ];
 

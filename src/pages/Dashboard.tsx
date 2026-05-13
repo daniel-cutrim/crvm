@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import {
   Calendar as CalendarIcon, Users, TrendingUp, DollarSign, Clock, AlertCircle,
-  UserPlus, FileText, ClipboardList, Settings, ArrowRight,
-  CheckCircle2, XCircle, Activity, Trophy, Target, ChevronDown,
+  ClipboardList, CheckCircle2, XCircle, Trophy, Target, ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -389,12 +388,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { title: 'Agendamentos Hoje', value: kpis.consultasHoje, sub: `${kpis.compareceram} compareceram · ${kpis.faltaram} faltaram`, icon: CalendarIcon, accent: 'bg-sky-50 text-sky-600' },
           { title: `Faturamento (${periodoLabel})`, value: formatCurrency(kpis.faturamentoPeriodo), sub: `Recebido: ${formatCurrency(kpis.recebidoPeriodo)}`, icon: DollarSign, accent: 'bg-teal-50 text-teal-600' },
           { title: `Lucro (${periodoLabel})`, value: formatCurrency(kpis.lucro), sub: `Despesas: ${formatCurrency(kpis.despesasPeriodo)}`, icon: TrendingUp, accent: kpis.lucro >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600' },
-          { title: 'Clientes Ativos', value: kpis.pacientesAtivos, sub: `${kpis.leadsNovos} leads novos no período`, icon: Users, accent: 'bg-violet-50 text-violet-600' },
         ].map((s, i) => (
           <Card key={i} className="overflow-hidden">
             <CardContent className="p-4">
@@ -412,56 +410,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </Card>
         ))}
       </div>
-
-      {/* ── KPIs Avançados ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="relative">
-              <svg className="w-16 h-16 -rotate-90">
-                <circle cx="32" cy="32" r="26" stroke="hsl(var(--border))" strokeWidth="6" fill="none" />
-                <circle cx="32" cy="32" r="26" stroke="hsl(var(--primary))" strokeWidth="6" fill="none"
-                  strokeDasharray={`${(kpis.taxaOcupacao / 100) * 163.4} 163.4`} strokeLinecap="round" />
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">{kpis.taxaOcupacao}%</span>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Taxa de Ocupação</p>
-              <p className="text-xs text-muted-foreground">Agenda — {periodoLabel}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-sky-50">
-              <DollarSign className="h-6 w-6 text-sky-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Ticket Médio</p>
-              <p className="text-2xl font-bold tabular-nums">{formatCurrency(kpis.ticketMedio)}</p>
-              <p className="text-xs text-muted-foreground">Receitas pagas — {periodoLabel}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="relative">
-              <svg className="w-16 h-16 -rotate-90">
-                <circle cx="32" cy="32" r="26" stroke="hsl(var(--border))" strokeWidth="6" fill="none" />
-                <circle cx="32" cy="32" r="26" stroke={kpis.taxaInadimplencia > 20 ? '#ef4444' : '#f59e0b'} strokeWidth="6" fill="none"
-                  strokeDasharray={`${(kpis.taxaInadimplencia / 100) * 163.4} 163.4`} strokeLinecap="round" />
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">{kpis.taxaInadimplencia}%</span>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Inadimplência</p>
-              <p className="text-xs text-muted-foreground">{formatCurrency(kpis.emAbertoPeriodo)} em aberto</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-
 
       {/* ── Seção CRM: Funil de Vendas ── */}
       <div className="space-y-4">
@@ -732,7 +680,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       </div>
 
       {/* ── Conversion & Alerts Row ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-5 flex items-center gap-4">
             <div className="relative">
@@ -759,17 +707,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <p className={`text-2xl font-bold tabular-nums ${kpis.tarefasAtrasadas > 0 ? 'text-destructive' : 'text-emerald-600'}`}>
                 {kpis.tarefasAtrasadas}
               </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-amber-50">
-              <FileText className="h-6 w-6 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Propostas Aprovadas</p>
-              <p className="text-2xl font-bold tabular-nums">{kpis.orcAprovados}</p>
             </div>
           </CardContent>
         </Card>

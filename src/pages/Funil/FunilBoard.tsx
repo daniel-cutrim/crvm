@@ -22,6 +22,18 @@ function avatarColor(nome: string) {
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
 }
 
+const TAG_COLORS = ['#f97316', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#0ea5e9', '#1e293b'];
+function tagColor(tag: string) {
+  let h = 0;
+  for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) & 0xffffffff;
+  return TAG_COLORS[Math.abs(h) % TAG_COLORS.length];
+}
+
+function diasNaEtapa(lead: Lead) {
+  const desde = lead.etapa_entrou_at || lead.created_at;
+  return Math.floor((Date.now() - new Date(desde).getTime()) / (1000 * 60 * 60 * 24));
+}
+
 interface CardProps {
   lead: Lead;
   dragging: boolean;
@@ -57,15 +69,38 @@ function LeadCard({ lead, dragging, colIdx, etapas, onClick, onDragStart, onDrag
         </p>
       </div>
 
-      {/* Data criação */}
-      <p className="text-[11px] text-muted-foreground pl-5 mb-1">
-        {format(parseISO(lead.created_at), "d 'de' MMM 'de' yyyy", { locale: ptBR })}
-      </p>
+      {/* Data criação + dias na etapa */}
+      <div className="flex items-center gap-2 pl-5 mb-1">
+        <p className="text-[11px] text-muted-foreground flex-1">
+          {format(parseISO(lead.created_at), "d MMM", { locale: ptBR })}
+        </p>
+        <span className="text-[10px] font-medium text-primary bg-primary/10 px-1 py-0.5 rounded">
+          {diasNaEtapa(lead)}d
+        </span>
+      </div>
 
       {/* Valor */}
       <p className="text-[11px] font-medium text-foreground pl-5 mb-2">
         {formatBRL(lead.valor)}
       </p>
+
+      {/* Tags */}
+      {(lead.tags || []).length > 0 && (
+        <div className="flex flex-wrap gap-1 pl-5 mb-1.5">
+          {(lead.tags || []).slice(0, 3).map(tag => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium text-white"
+              style={{ backgroundColor: tagColor(tag) }}
+            >
+              {tag}
+            </span>
+          ))}
+          {(lead.tags || []).length > 3 && (
+            <span className="text-[9px] text-muted-foreground">+{(lead.tags || []).length - 3}</span>
+          )}
+        </div>
+      )}
 
       {/* Etiqueta + avatar */}
       <div className="flex items-end justify-between pl-5 gap-2">
