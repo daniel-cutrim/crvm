@@ -2,15 +2,16 @@ import { useState, useMemo, useCallback } from 'react';
 import {
   Calendar as CalendarIcon, Users, TrendingUp, DollarSign, Clock, AlertCircle,
   UserPlus, FileText, ClipboardList, Settings, ArrowRight,
-  CheckCircle2, XCircle, Activity,
+  CheckCircle2, XCircle, Activity, Trophy, Target, ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useConsultas, useLeads, usePlanosTratamento, useReceitas, useDespesas, useTarefas, usePacientes } from '@/hooks/useData';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useConsultas, useLeads, usePlanosTratamento, useReceitas, useDespesas, useTarefas, usePacientes, useFunis } from '@/hooks/useData';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { format, parseISO, subMonths, startOfMonth, endOfMonth, startOfQuarter, startOfYear, endOfYear, endOfQuarter, isWithinInterval, isToday, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -32,7 +33,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { receitas } = useReceitas();
   const { despesas } = useDespesas();
   const { tarefas } = useTarefas();
+  const atividades = tarefas;
   const { pacientes } = usePacientes();
+  const { funis } = useFunis();
 
   const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => format(today, 'yyyy-MM-dd'), [today]);
@@ -43,6 +46,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     from: startOfMonth(today),
     to: today,
   });
+  const [selectedFunilIds, setSelectedFunilIds] = useState<string[]>([]);
 
   // Date range based on selected period
   const periodoRange = useMemo(() => {
@@ -173,6 +177,81 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       .sort((a, b) => b.value - a.value);
   }, [leads, isInPeriodo]);
 
+  // ── CRM: leads filtrados por funil ──
+  const leadsFiltrados = useMemo(() => {
+    if (selectedFunilIds.length === 0) return leads;
+    return leads.filter(l => l.funil_id && selectedFunilIds.includes(l.funil_id));
+  }, [leads, selectedFunilIds]);
+
+  const crmKpis = useMemo(() => {
+    const abertos = leadsFiltrados.filter(l => !l.resultado);
+    const ganhos = leadsFiltrados.filter(l => l.resultado === 'ganho');
+    const perdidos = leadsFiltrados.filter(l => l.resultado === 'perdido');
+    const negociosAbertos = abertos.length;
+    const valorFunil = abertos.reduce((s, l) => s + Number(l.valor || 0), 0);
+    const totalEncerrados = ganhos.length + perdidos.length;
+    const taxaConversaoCrm = totalEncerrados > 0
+      ? ((ganhos.length / totalEncerrados) * 100).toFixed(1)
+      : '0.0';
+    const receitaGerada = ganhos.reduce((s, l) => s + Number(l.valor || 0), 0);
+    const ticketMedioCrm = ganhos.length > 0 ? receitaGerada / ganhos.length : 0;
+    const ganhosComData = ganhos.filter(l => l.resultado_at);
+    const tempoParaFechar = ganhosComData.length > 0
+      ? Math.round(
+          ganhosComData.reduce((s, l) => {
+            const dias = Math.floor(
+              (new Date(l.resultado_at!).getTime() - new Date(l.created_at).getTime()) / (1000 * 60 * 60 * 24)
+            );
+            return s + dias;
+          }, 0) / ganhosComData.length
+        )
+      : 0;
+    return { negociosAbertos, valorFunil, taxaConversaoCrm, receitaGerada, ticketMedioCrm, tempoParaFechar, ganhos, perdidos, abertos };
+  }, [leadsFiltrados]);
+
+  // ── CRM: funil chart ──
+  const funilChart = useMemo(() => {
+    const etapaMap = new Map<string, number>();
+    leadsFiltrados.filter(l => !l.resultado).forEach(l => {
+      const etapa = l.etapa_funil || 'Sem etapa';
+      etapaMap.set(etapa, (etapaMap.get(etapa) || 0) + 1);
+    });
+    return Array.from(etapaMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [leadsFiltrados]);
+
+  // ── CRM: atividades por tipo ──
+  const atividadesChart = useMemo(() => {
+    const tipos = ['follow_up', 'ligacao', 'reuniao', 'email', 'outros'] as const;
+    const TIPO_LABEL: Record<string, string> = {
+      follow_up: 'Follow-up', ligacao: 'Ligações', reuniao: 'Reuniões', email: 'Emails', outros: 'Outros',
+    };
+    return tipos.map(tipo => {
+      const doTipo = atividades.filter(t => (t.tipo || 'outros') === tipo);
+      return {
+        name: TIPO_LABEL[tipo],
+        Concluídas: doTipo.filter(t => t.status === 'Concluída').length,
+        Pendentes: doTipo.filter(t => t.status === 'Pendente' && new Date(t.data_vencimento) >= new Date()).length,
+        Atrasadas: doTipo.filter(t => t.status !== 'Concluída' && new Date(t.data_vencimento) < new Date()).length,
+      };
+    }).filter(d => d.Concluídas + d.Pendentes + d.Atrasadas > 0);
+  }, [atividades]);
+
+  // ── CRM: motivos de perda ──
+  const motivosChart = useMemo(() => {
+    const map = new Map<string, number>();
+    leadsFiltrados.filter(l => l.resultado === 'perdido' && l.motivo_perda).forEach(l => {
+      const motivo = l.motivo_perda!;
+      map.set(motivo, (map.get(motivo) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [leadsFiltrados]);
+
   // ── Conversion rate ──
   const taxaConversao = useMemo(() => {
     const total = leads.length;
@@ -264,6 +343,48 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               />
             </PopoverContent>
           </Popover>
+
+          {/* Filtro de Funil */}
+          {funis.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs h-7 px-3 gap-1.5">
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  {selectedFunilIds.length === 0
+                    ? 'Todos os funis'
+                    : selectedFunilIds.length === 1
+                      ? funis.find(f => f.id === selectedFunilIds[0])?.nome ?? 'Funil'
+                      : `${selectedFunilIds.length} funis`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-2" align="end">
+                <p className="text-xs font-semibold text-muted-foreground mb-2 px-1">Funil</p>
+                {funis.map(f => (
+                  <label key={f.id} className="flex items-center gap-2 px-1 py-1.5 rounded hover:bg-muted cursor-pointer">
+                    <Checkbox
+                      checked={selectedFunilIds.includes(f.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedFunilIds(prev =>
+                          checked ? [...prev, f.id] : prev.filter(id => id !== f.id)
+                        );
+                      }}
+                    />
+                    <span className="text-xs">{f.nome}</span>
+                  </label>
+                ))}
+                {selectedFunilIds.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs h-7 mt-1"
+                    onClick={() => setSelectedFunilIds([])}
+                  >
+                    Limpar filtro
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
       </div>
 
@@ -341,6 +462,173 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       </div>
 
 
+
+      {/* ── Seção CRM: Funil de Vendas ── */}
+      <div className="space-y-4">
+        <h2 className="text-base font-semibold text-foreground">Funil de Vendas</h2>
+
+        {/* 6 KPI cards do CRM */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            { title: 'Negócios em Aberto', value: crmKpis.negociosAbertos, sub: 'Leads sem resultado', icon: Users, accent: 'bg-sky-50 text-sky-600' },
+            { title: 'Valor do Funil', value: formatCurrency(crmKpis.valorFunil), sub: 'Total em aberto', icon: DollarSign, accent: 'bg-amber-50 text-amber-600' },
+            { title: 'Taxa de Conversão', value: `${crmKpis.taxaConversaoCrm}%`, sub: `${crmKpis.ganhos.length} ganhos · ${crmKpis.perdidos.length} perdidos`, icon: TrendingUp, accent: 'bg-emerald-50 text-emerald-600' },
+            { title: 'Receita Gerada', value: formatCurrency(crmKpis.receitaGerada), sub: 'Leads ganhos', icon: Trophy, accent: 'bg-teal-50 text-teal-600' },
+            { title: 'Ticket Médio', value: formatCurrency(crmKpis.ticketMedioCrm), sub: 'Por negócio ganho', icon: Target, accent: 'bg-violet-50 text-violet-600' },
+            { title: 'Tempo para Fechar', value: `${crmKpis.tempoParaFechar} dias`, sub: 'Média até ganho', icon: Clock, accent: 'bg-orange-50 text-orange-600' },
+          ].map((s, i) => (
+            <Card key={i} className="overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">{s.title}</p>
+                    <p className="text-xl font-bold text-foreground tabular-nums">{s.value}</p>
+                    <p className="text-[11px] text-muted-foreground">{s.sub}</p>
+                  </div>
+                  <div className={`p-2 rounded-lg ${s.accent}`}>
+                    <s.icon className="h-5 w-5" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Gráficos row 1: Funil por Etapa + Status de Oportunidades */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Funil por Etapa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {funilChart.length === 0 ? (
+                <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Sem dados suficientes</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={funilChart} layout="vertical" barGap={4}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
+                    <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={90} />
+                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }} />
+                    <Bar dataKey="value" name="Leads" fill="#0ea5e9" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Status de Oportunidades</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const statusData = [
+                  { name: 'Em aberto', value: crmKpis.abertos.length, fill: '#3b82f6' },
+                  { name: 'Ganhos', value: crmKpis.ganhos.length, fill: '#10b981' },
+                  { name: 'Perdidos', value: crmKpis.perdidos.length, fill: '#ef4444' },
+                ].filter(d => d.value > 0);
+                const total = statusData.reduce((s, d) => s + d.value, 0);
+                if (statusData.length === 0) {
+                  return <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Sem dados suficientes</div>;
+                }
+                return (
+                  <div className="relative flex flex-col items-center">
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie data={statusData} dataKey="value" innerRadius={60} outerRadius={90} paddingAngle={3} strokeWidth={0}>
+                          {statusData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                        </Pie>
+                        <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold tabular-nums">{total}</p>
+                        <p className="text-[10px] text-muted-foreground">total</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center mt-2">
+                      {statusData.map(d => (
+                        <div key={d.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: d.fill }} />
+                          {d.name} ({d.value})
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Gráficos row 2: Atividades por Tipo + Motivos de Perda */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Atividades por Tipo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {atividadesChart.length === 0 ? (
+                <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Sem dados suficientes</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={atividadesChart} barGap={2}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="Concluídas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Pendentes" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Atrasadas" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Motivos de Perda</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {motivosChart.length === 0 ? (
+                <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Sem dados suficientes</div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <ResponsiveContainer width="100%" height={180}>
+                    <PieChart>
+                      <Pie
+                        data={motivosChart}
+                        dataKey="value"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        strokeWidth={0}
+                        label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {motivosChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center mt-2">
+                    {motivosChart.map((d, i) => (
+                      <div key={d.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                        {d.name} ({d.value})
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* ── Charts Row ── */}
       <div className="grid grid-cols-1 gap-6">

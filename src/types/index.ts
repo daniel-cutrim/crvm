@@ -9,6 +9,21 @@ export interface Usuario {
   created_at: string;
 }
 
+export interface Pessoa {
+  id: string;
+  clinica_id?: string | null;
+  nome: string;
+  email: string | null;
+  telefone: string | null;
+  organizacao: string | null;
+  observacoes: string | null;
+  created_at: string;
+  updated_at?: string;
+  // computed (joins)
+  negocios_abertos?: number;
+  negocios_fechados?: number;
+}
+
 export interface Integracao {
   id: string;
   clinica_id: string;
@@ -86,6 +101,12 @@ export interface Lead {
   motivo_perda?: string | null;
   resultado_at?: string | null;
   created_at: string;
+  pessoa_id?: string | null;
+  proprietario_id?: string | null;
+  valor?: number | null;
+  // joins
+  pessoa?: Pessoa;
+  proprietario?: Usuario;
 }
 
 export interface LeadHistorico {
@@ -191,9 +212,12 @@ export interface Tarefa {
   data_vencimento: string;
   status: 'Pendente' | 'Em andamento' | 'Concluída';
   created_at: string;
+  tipo?: 'follow_up' | 'ligacao' | 'reuniao' | 'email' | 'outros' | null;
+  pessoa_id?: string | null;
   paciente?: Paciente;
   lead?: Lead;
   responsavel?: Usuario;
+  pessoa?: Pessoa;
 }
 
 export interface Clinica {
@@ -278,4 +302,45 @@ export interface LeadOrigem {
   ativo: boolean;
   ordem: number;
   created_at: string;
+}
+
+export interface CampoCategoria {
+  id: string;
+  clinica_id?: string | null;
+  nome: string;
+  funis_ids: string[];
+  ordem: number;
+  created_at: string;
+  campos?: CampoPersonalizado[];
+}
+
+export interface CampoPersonalizado {
+  id: string;
+  categoria_id: string;
+  nome: string;
+  tipo: 'texto' | 'numero' | 'data' | 'lista' | 'booleano' | 'moeda';
+  opcoes_lista: string[] | null;
+  obrigatorio: boolean;
+  ordem: number;
+  created_at: string;
+}
+
+export interface CampoValor {
+  id: string;
+  campo_id: string;
+  lead_id: string;
+  valor: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface LeadEtapaHistorico {
+  id: string;
+  lead_id: string;
+  etapa_id: string | null;
+  etapa_nome: string;
+  entrada_at: string;
+  saida_at: string | null;
+  created_at: string;
+  dias?: number; // computed: dias entre entrada_at e saida_at (ou agora)
 }

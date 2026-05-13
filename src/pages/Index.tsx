@@ -13,14 +13,25 @@ const ConfiguracoesPage = lazy(() => import('@/pages/Configuracoes'));
 const MarketingPage = lazy(() => import('@/pages/Marketing'));
 const ChatPage = lazy(() => import('@/pages/Chat'));
 
-type Page = 'dashboard' | 'agenda' | 'crm' | 'financeiro' | 'marketing' | 'chat' | 'tarefas' | 'configuracoes';
+// Novos módulos (serão criados nas próximas fases)
+const FunilPage = lazy(() =>
+  import('@/pages/Funil').catch(() => import('@/pages/CRM'))
+);
+const AtividadesPage = lazy(() =>
+  import('@/pages/Atividades').catch(() => import('@/pages/Tarefas'))
+);
+const PessoasPage = lazy(() =>
+  import('@/pages/Pessoas').catch(() => ({ default: () => null as any }))
+);
+
+type Page = 'dashboard' | 'agenda' | 'funil' | 'pessoas' | 'atividades' | 'financeiro' | 'marketing' | 'chat' | 'configuracoes';
 
 export default function IndexPage() {
   const { user, usuario, loading } = useAuth();
   const { page } = useParams<{ page: string }>();
   const navigate = useNavigate();
 
-  const validPages: Page[] = ['dashboard', 'agenda', 'crm', 'financeiro', 'marketing', 'chat', 'tarefas', 'configuracoes'];
+  const validPages: Page[] = ['dashboard', 'agenda', 'funil', 'pessoas', 'atividades', 'financeiro', 'marketing', 'chat', 'configuracoes'];
   const initialPage = (page && validPages.includes(page as Page)) ? (page as Page) : 'dashboard';
 
   const [currentPage, setCurrentPage] = useState<Page>(initialPage);
@@ -57,11 +68,12 @@ export default function IndexPage() {
     switch (currentPage) {
       case 'dashboard': return <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
       case 'agenda': return <AgendaPage />;
-      case 'crm': return !isOnlyProfissional(papel) ? <CRMPage onNavigate={(p) => handlePageChange(p as Page)} /> : <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
+      case 'funil': return !isOnlyProfissional(papel) ? <FunilPage onNavigate={(p) => handlePageChange(p as Page)} /> : <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
+      case 'pessoas': return !isOnlyProfissional(papel) ? <PessoasPage /> : <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
+      case 'atividades': return <AtividadesPage />;
       case 'financeiro': return isGestor(papel) ? <FinanceiroPage /> : <Dashboard />;
       case 'marketing': return isGestor(papel) ? <MarketingPage /> : <Dashboard />;
       case 'chat': return (isGestor(papel) || papel === 'Recepção') ? <ChatPage /> : <Dashboard />;
-      case 'tarefas': return <TarefasPage />;
       case 'configuracoes': return isGestor(papel) ? <ConfiguracoesPage /> : <Dashboard />;
       default: return <Dashboard />;
     }

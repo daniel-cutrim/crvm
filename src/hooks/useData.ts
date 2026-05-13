@@ -8,7 +8,8 @@ import type {
   Tarefa, Usuario, ProcedimentoPadrao, Clinica, LeadHistorico,
   PlanoTratamentoItem, NotificationSettings, PacienteDocumento,
   ProntuarioEntrada, DespesaRecorrente, Integracao, LeadJornada,
-  Setor, Funil, FunilEtapa
+  Setor, Funil, FunilEtapa, Pessoa, CampoCategoria, CampoPersonalizado,
+  CampoValor, LeadEtapaHistorico
 } from '@/types';
 import type { OdontogramaEntrada } from '@/types/odontograma';
 
@@ -149,13 +150,15 @@ export function useConsultas() {
   return { consultas: h.data, loading: h.loading, fetchConsultas: h.fetch, addConsulta, updateConsulta, deleteConsulta };
 }
 
+const LEADS_SELECT = '*, pessoa:pessoas!pessoa_id(*), proprietario:usuarios!proprietario_id(*)';
+
 export function useLeads() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+    const { data } = await supabase.from('leads').select(LEADS_SELECT).order('created_at', { ascending: false });
     setLeads((data as unknown as Lead[] | null) || []);
     setLoading(false);
   }, []);
@@ -165,22 +168,23 @@ export function useLeads() {
     const channel = supabase
       .channel('leads-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
-        const newRecord = payload.new as Record<string, unknown> | undefined;
         const oldRecord = payload.old as Record<string, unknown> | undefined;
-        if (payload.eventType === 'INSERT' && newRecord) setLeads(prev => [newRecord as unknown as Lead, ...prev]);
-        else if (payload.eventType === 'UPDATE' && newRecord) setLeads(prev => prev.map(l => l.id === (newRecord as any).id ? newRecord as unknown as Lead : l));
-        else if (payload.eventType === 'DELETE' && oldRecord) setLeads(prev => prev.filter(l => l.id !== (oldRecord as any).id));
+        if (payload.eventType === 'DELETE' && oldRecord) {
+          setLeads(prev => prev.filter(l => l.id !== (oldRecord as any).id));
+        } else {
+          fetchLeads();
+        }
       }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [fetchLeads]);
 
   const addLead = async (lead: Record<string, unknown>) => {
-    const { data, error } = await (supabase.from('leads') as any).insert(lead).select().single();
+    const { data, error } = await (supabase.from('leads') as any).insert(lead).select(LEADS_SELECT).single();
     if (!error && data) setLeads(prev => [data as unknown as Lead, ...prev]);
     return { data: data as unknown as Lead | null, error };
   };
   const updateLead = async (id: string, updates: Record<string, unknown>) => {
-    const { data, error } = await (supabase.from('leads') as any).update(updates).eq('id', id).select().single();
+    const { data, error } = await (supabase.from('leads') as any).update(updates).eq('id', id).select(LEADS_SELECT).single();
     if (!error && data) setLeads(prev => prev.map(l => l.id === id ? data as unknown as Lead : l));
     return { data: data as unknown as Lead | null, error };
   };
@@ -287,7 +291,7 @@ export function useDespesas() {
 }
 
 export function useTarefas() {
-  const h = useSupabaseTable<Tarefa>('tarefas', '*, paciente:pacientes(*), lead:leads(*), responsavel:usuarios!responsavel_id(*)');
+  const h = useSupabaseTable<Tarefa>('tarefas', '*, paciente:pacientes(*), lead:leads(*), responsavel:usuarios!responsavel_id(*), pessoa:pessoas!pessoa_id(*)');
   return { tarefas: h.data, loading: h.loading, fetchTarefas: h.fetch, addTarefa: h.add, updateTarefa: h.update, deleteTarefa: h.remove };
 }
 
@@ -573,4 +577,208 @@ export function useFunilEtapas(funilId: string | null) {
   };
 
   return { etapas, setEtapas, loading, fetchEtapas, addEtapa, updateEtapa, deleteEtapa };
+}
+
+export function usePessoas() {
+  const { usuario } = useAuth();
+  const [pessoas, setPessoas] = useState<Pessoa[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPessoas = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('pessoas')
+      .select('*')
+      .order('nome', { ascending: true });
+    setPessoas((data as unknown as Pessoa[] | null) || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchPessoas(); }, [fetchPessoas]);
+
+  const addPessoa = async (item: Record<string, unknown>) => {
+    const { data, error } = await (supabase.from('pessoas') as any)
+      .insert({ ...item, clinica_id: usuario?.clinica_id })
+      .select().single();
+    if (!error && data) setPessoas(prev => [...prev, data as unknown as Pessoa].sort((a, b) => a.nome.localeCompare(b.nome)));
+    return { data: data as unknown as Pessoa | null, error };
+  };
+
+  const updatePessoa = async (id: string, updates: Record<string, unknown>) => {
+    const { data, error } = await (supabase.from('pessoas') as any)
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id).select().single();
+    if (!error && data) setPessoas(prev => prev.map(p => p.id === id ? data as unknown as Pessoa : p));
+    return { data: data as unknown as Pessoa | null, error };
+  };
+
+  const deletePessoa = async (id: string) => {
+    const { error } = await supabase.from('pessoas').delete().eq('id', id);
+    if (!error) setPessoas(prev => prev.filter(p => p.id !== id));
+    return { error };
+  };
+
+  return { pessoas, loading, fetchPessoas, addPessoa, updatePessoa, deletePessoa };
+}
+
+export function useLeadEtapaHistorico(leadId: string | null) {
+  const [historico, setHistorico] = useState<LeadEtapaHistorico[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchHistorico = useCallback(async () => {
+    if (!leadId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('lead_etapa_historico')
+      .select('*')
+      .eq('lead_id', leadId)
+      .order('entrada_at', { ascending: true });
+
+    const mapped = ((data as unknown as LeadEtapaHistorico[] | null) || []).map(h => ({
+      ...h,
+      dias: Math.floor(
+        (new Date(h.saida_at || new Date().toISOString()).getTime() - new Date(h.entrada_at).getTime())
+        / (1000 * 60 * 60 * 24)
+      ),
+    }));
+    setHistorico(mapped);
+    setLoading(false);
+  }, [leadId]);
+
+  useEffect(() => { fetchHistorico(); }, [fetchHistorico]);
+
+  const registrarEntrada = async (leadId: string, etapaId: string | null, etapaNome: string) => {
+    // Fechar etapa anterior
+    const etapaAberta = historico.find(h => !h.saida_at);
+    if (etapaAberta) {
+      await (supabase.from('lead_etapa_historico') as any)
+        .update({ saida_at: new Date().toISOString() })
+        .eq('id', etapaAberta.id);
+    }
+    // Abrir nova etapa
+    const { data, error } = await (supabase.from('lead_etapa_historico') as any)
+      .insert({ lead_id: leadId, etapa_id: etapaId, etapa_nome: etapaNome })
+      .select().single();
+    if (!error) fetchHistorico();
+    return { data, error };
+  };
+
+  return { historico, loading, fetchHistorico, registrarEntrada };
+}
+
+export function useCamposCategorias() {
+  const { usuario } = useAuth();
+  const [categorias, setCategorias] = useState<CampoCategoria[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchCategorias = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('campos_categorias')
+      .select('*, campos:campos_personalizados(*)')
+      .order('ordem', { ascending: true });
+    setCategorias((data as unknown as CampoCategoria[] | null) || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchCategorias(); }, [fetchCategorias]);
+
+  const addCategoria = async (item: Record<string, unknown>) => {
+    const { data, error } = await (supabase.from('campos_categorias') as any)
+      .insert({ ...item, clinica_id: usuario?.clinica_id })
+      .select('*, campos:campos_personalizados(*)').single();
+    if (!error && data) setCategorias(prev => [...prev, data as unknown as CampoCategoria]);
+    return { data: data as unknown as CampoCategoria | null, error };
+  };
+
+  const updateCategoria = async (id: string, updates: Record<string, unknown>) => {
+    const { data, error } = await (supabase.from('campos_categorias') as any)
+      .update(updates).eq('id', id)
+      .select('*, campos:campos_personalizados(*)').single();
+    if (!error && data) setCategorias(prev => prev.map(c => c.id === id ? data as unknown as CampoCategoria : c));
+    return { data: data as unknown as CampoCategoria | null, error };
+  };
+
+  const deleteCategoria = async (id: string) => {
+    const { error } = await supabase.from('campos_categorias').delete().eq('id', id);
+    if (!error) setCategorias(prev => prev.filter(c => c.id !== id));
+    return { error };
+  };
+
+  return { categorias, loading, fetchCategorias, addCategoria, updateCategoria, deleteCategoria };
+}
+
+export function useCamposPersonalizados(categoriaId: string | null) {
+  const [campos, setCampos] = useState<CampoPersonalizado[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchCampos = useCallback(async () => {
+    if (!categoriaId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('campos_personalizados')
+      .select('*')
+      .eq('categoria_id', categoriaId)
+      .order('ordem', { ascending: true });
+    setCampos((data as unknown as CampoPersonalizado[] | null) || []);
+    setLoading(false);
+  }, [categoriaId]);
+
+  useEffect(() => { fetchCampos(); }, [fetchCampos]);
+
+  const addCampo = async (item: Record<string, unknown>) => {
+    const { data, error } = await (supabase.from('campos_personalizados') as any)
+      .insert(item).select().single();
+    if (!error && data) setCampos(prev => [...prev, data as unknown as CampoPersonalizado]);
+    return { data: data as unknown as CampoPersonalizado | null, error };
+  };
+
+  const updateCampo = async (id: string, updates: Record<string, unknown>) => {
+    const { data, error } = await (supabase.from('campos_personalizados') as any)
+      .update(updates).eq('id', id).select().single();
+    if (!error && data) setCampos(prev => prev.map(c => c.id === id ? data as unknown as CampoPersonalizado : c));
+    return { data: data as unknown as CampoPersonalizado | null, error };
+  };
+
+  const deleteCampo = async (id: string) => {
+    const { error } = await supabase.from('campos_personalizados').delete().eq('id', id);
+    if (!error) setCampos(prev => prev.filter(c => c.id !== id));
+    return { error };
+  };
+
+  return { campos, loading, fetchCampos, addCampo, updateCampo, deleteCampo };
+}
+
+export function useCamposValores(leadId: string | null) {
+  const [valores, setValores] = useState<CampoValor[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchValores = useCallback(async () => {
+    if (!leadId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('campos_valores')
+      .select('*')
+      .eq('lead_id', leadId);
+    setValores((data as unknown as CampoValor[] | null) || []);
+    setLoading(false);
+  }, [leadId]);
+
+  useEffect(() => { fetchValores(); }, [fetchValores]);
+
+  const upsertValor = async (campoId: string, leadId: string, valor: string) => {
+    const { data, error } = await (supabase.from('campos_valores') as any)
+      .upsert({ campo_id: campoId, lead_id: leadId, valor, updated_at: new Date().toISOString() }, { onConflict: 'campo_id,lead_id' })
+      .select().single();
+    if (!error && data) {
+      setValores(prev => {
+        const idx = prev.findIndex(v => v.campo_id === campoId);
+        if (idx >= 0) return prev.map((v, i) => i === idx ? data as unknown as CampoValor : v);
+        return [...prev, data as unknown as CampoValor];
+      });
+    }
+    return { data: data as unknown as CampoValor | null, error };
+  };
+
+  return { valores, loading, fetchValores, upsertValor };
 }
