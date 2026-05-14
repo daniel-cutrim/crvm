@@ -152,9 +152,12 @@
     @apply bg-slate-100 text-slate-700;
   }
   .dental-input {
-    @apply w-full px-3 py-2.5 bg-white border border-border rounded-lg text-sm transition-all
+    @apply w-full px-3 py-2.5 bg-background text-foreground border border-border rounded-lg text-sm transition-all
       focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
       disabled:bg-muted disabled:text-muted-foreground placeholder:text-muted-foreground;
+  }
+  .dental-input option {
+    @apply bg-background text-foreground;
   }
 }
 

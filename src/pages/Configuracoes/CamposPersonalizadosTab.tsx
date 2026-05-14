@@ -11,6 +11,7 @@ import {
   GripVertical,
   Loader2,
   SlidersHorizontal,
+  Lock,
 } from 'lucide-react';
 import { useCamposCategorias, useFunis } from '@/hooks/useData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -344,43 +345,49 @@ export default function CamposPersonalizadosTab() {
                   </Badge>
 
                   {/* Menu ... */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={e => {
-                          e.stopPropagation();
-                          openEditCat(cat);
-                        }}
-                      >
-                        <Edit2 className="h-3.5 w-3.5 mr-2" />
-                        Editar categoria
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={e => {
-                          e.stopPropagation();
-                          openNewCampo(cat.id);
-                        }}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-2" />
-                        Novo campo aqui
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-red-500 focus:text-red-500"
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleDeleteCat(cat);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-2" />
-                        Excluir categoria
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {cat.is_sistema ? (
+                    <span title="Categoria do sistema — não editável" className="flex items-center justify-center h-7 w-7">
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                    </span>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={e => {
+                            e.stopPropagation();
+                            openEditCat(cat);
+                          }}
+                        >
+                          <Edit2 className="h-3.5 w-3.5 mr-2" />
+                          Editar categoria
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={e => {
+                            e.stopPropagation();
+                            openNewCampo(cat.id);
+                          }}
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-2" />
+                          Novo campo aqui
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-500 focus:text-red-500"
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleDeleteCat(cat);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          Excluir categoria
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
 
                 {/* Campos expandidos */}
@@ -422,35 +429,43 @@ export default function CamposPersonalizadosTab() {
                               )}
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                title={isHidden ? 'Mostrar' : 'Ocultar'}
-                                onClick={() => toggleHidden(campo.id)}
-                              >
-                                {isHidden ? (
-                                  <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
-                                ) : (
-                                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => openEditCampo(campo)}
-                              >
-                                <Edit2 className="h-3.5 w-3.5 text-blue-500" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => handleDeleteCampo(campo)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                              </Button>
+                              {campo.is_sistema ? (
+                                <span title="Campo do sistema — não editável" className="flex items-center justify-center h-7 w-7">
+                                  <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />
+                                </span>
+                              ) : (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    title={isHidden ? 'Mostrar' : 'Ocultar'}
+                                    onClick={() => toggleHidden(campo.id)}
+                                  >
+                                    {isHidden ? (
+                                      <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                                    ) : (
+                                      <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => openEditCampo(campo)}
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5 text-blue-500" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => handleDeleteCampo(campo)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                  </Button>
+                                </>
+                              )}
                             </div>
                           </div>
                         );

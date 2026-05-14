@@ -184,7 +184,7 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
   if (!lead) return null;
 
   const categoriasFiltradas = categorias.filter(
-    c => !lead.funil_id || c.funis_ids?.includes(lead.funil_id)
+    c => c.is_sistema || !lead.funil_id || c.funis_ids?.includes(lead.funil_id)
   );
 
   const etapaAtual = etapas.find(e => e.id === lead.etapa_id || e.nome === lead.etapa_funil);

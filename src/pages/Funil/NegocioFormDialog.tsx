@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, UserPlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { maskPhone } from '@/utils/masks';
 import type { FunilEtapa, Pessoa, Usuario } from '@/types';
 
 const ORIGENS = ['Instagram', 'Google Ads', 'Facebook', 'Site', 'Indicação', 'WhatsApp', 'Outro'];
@@ -15,9 +16,10 @@ interface Props {
   pessoas: Pessoa[];
   usuarios: Usuario[];
   funilId: string | null;
+  onAddPessoa: (data: Record<string, unknown>) => Promise<{ data: Pessoa | null; error: unknown }>;
 }
 
-export default function NegocioFormDialog({ open, onClose, onSave, etapas, pessoas, usuarios, funilId }: Props) {
+export default function NegocioFormDialog({ open, onClose, onSave, etapas, pessoas, usuarios, funilId, onAddPessoa }: Props) {
   const [nome, setNome] = useState('');
   const [pessoaId, setPessoaId] = useState('');
   const [proprietarioId, setProprietarioId] = useState('');
@@ -27,12 +29,19 @@ export default function NegocioFormDialog({ open, onClose, onSave, etapas, pesso
   const [origem, setOrigem] = useState('');
   const [pessoaSearch, setPessoaSearch] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Inline nova pessoa
+  const [showNovaPessoa, setShowNovaPessoa] = useState(false);
+  const [novaPessoa, setNovaPessoa] = useState({ nome: '', email: '', telefone: '' });
+  const [savingPessoa, setSavingPessoa] = useState(false);
 
   useEffect(() => {
     if (open) {
       setNome(''); setPessoaId(''); setProprietarioId(''); setValor('');
       setEtapaId(etapas[0]?.id || ''); setDataFechamento(''); setOrigem('');
-      setPessoaSearch('');
+      setPessoaSearch(''); setShowDropdown(false);
+      setShowNovaPessoa(false); setNovaPessoa({ nome: '', email: '', telefone: '' });
     }
   }, [open, etapas]);
 
@@ -40,14 +49,50 @@ export default function NegocioFormDialog({ open, onClose, onSave, etapas, pesso
     !pessoaSearch || p.nome.toLowerCase().includes(pessoaSearch.toLowerCase())
   ).slice(0, 8);
 
+  const handlePessoaSearch = (v: string) => {
+    setPessoaSearch(v);
+    setPessoaId('');
+    setShowDropdown(true);
+    setShowNovaPessoa(false);
+  };
+
+  const handleSelectPessoa = (p: Pessoa) => {
+    setPessoaId(p.id);
+    setPessoaSearch(p.nome);
+    setShowDropdown(false);
+  };
+
+  const handleClearPessoa = () => {
+    setPessoaId('');
+    setPessoaSearch('');
+    setShowDropdown(false);
+  };
+
+  const handleSaveNovaPessoa = async () => {
+    if (!novaPessoa.nome.trim()) return;
+    setSavingPessoa(true);
+    const { data, error } = await onAddPessoa({
+      nome: novaPessoa.nome.trim(),
+      email: novaPessoa.email || null,
+      telefone: novaPessoa.telefone || null,
+    });
+    setSavingPessoa(false);
+    if (!error && data) {
+      setPessoaId(data.id);
+      setPessoaSearch(data.nome);
+      setShowNovaPessoa(false);
+      setNovaPessoa({ nome: '', email: '', telefone: '' });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome.trim()) return;
+    if (!nome.trim() || !pessoaId) return;
     setSaving(true);
     const etapa = etapas.find(et => et.id === etapaId) || etapas[0];
     await onSave({
       nome: nome.trim(),
-      pessoa_id: pessoaId || null,
+      pessoa_id: pessoaId,
       proprietario_id: proprietarioId || null,
       valor: valor ? parseFloat(valor) : null,
       etapa_id: etapa?.id || null,
@@ -80,36 +125,129 @@ export default function NegocioFormDialog({ open, onClose, onSave, etapas, pesso
             />
           </div>
 
-          {/* Pessoa */}
+          {/* Pessoa vinculada — obrigatório */}
           <div className="space-y-1.5">
-            <Label>Pessoa vinculada</Label>
-            <input
-              className="dental-input w-full"
-              value={pessoaSearch}
-              onChange={e => { setPessoaSearch(e.target.value); setPessoaId(''); }}
-              placeholder="Buscar pessoa por nome..."
-            />
-            {pessoaSearch && !pessoaId && filteredPessoas.length > 0 && (
-              <div className="border border-border rounded-lg bg-card shadow-sm overflow-hidden max-h-40 overflow-y-auto">
-                {filteredPessoas.map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => { setPessoaId(p.id); setPessoaSearch(p.nome); }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
-                  >
-                    <span className="font-medium">{p.nome}</span>
-                    {p.telefone && <span className="text-muted-foreground text-xs ml-2">{p.telefone}</span>}
-                  </button>
-                ))}
-              </div>
-            )}
-            {pessoaId && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="text-emerald-600">✓ Vinculado</span>
-                <button type="button" onClick={() => { setPessoaId(''); setPessoaSearch(''); }}>
-                  <X size={12} />
+            <Label>
+              Pessoa vinculada <span className="text-destructive">*</span>
+            </Label>
+
+            {pessoaId ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/20">
+                <span className="flex-1 text-sm font-medium text-foreground truncate">{pessoaSearch}</span>
+                <button type="button" onClick={handleClearPessoa} className="text-muted-foreground hover:text-foreground">
+                  <X size={14} />
                 </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="flex gap-1.5">
+                  <div className="relative flex-1">
+                    <input
+                      className="dental-input w-full pr-8"
+                      value={pessoaSearch}
+                      onChange={e => handlePessoaSearch(e.target.value)}
+                      onFocus={() => setShowDropdown(true)}
+                      placeholder="Buscar pessoa por nome..."
+                      autoComplete="off"
+                    />
+                    {pessoaSearch && (
+                      <button
+                        type="button"
+                        onClick={handleClearPessoa}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setShowNovaPessoa(v => !v); setShowDropdown(false); }}
+                    className="flex items-center gap-1 px-2.5 py-2 rounded-lg border border-border bg-muted hover:bg-muted/80 text-xs text-foreground transition-colors shrink-0"
+                    title="Criar nova pessoa"
+                  >
+                    <UserPlus size={14} />
+                  </button>
+                </div>
+
+                {/* Dropdown de resultados */}
+                {showDropdown && pessoaSearch && !pessoaId && (
+                  <div className="absolute top-full left-0 right-0 z-10 mt-1 border border-border rounded-lg bg-card shadow-md overflow-hidden max-h-40 overflow-y-auto">
+                    {filteredPessoas.length > 0 ? (
+                      filteredPessoas.map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => handleSelectPessoa(p)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
+                        >
+                          <span className="font-medium">{p.nome}</span>
+                          {p.telefone && <span className="text-muted-foreground text-xs ml-2">{p.telefone}</span>}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        Nenhuma pessoa encontrada.{' '}
+                        <button
+                          type="button"
+                          className="text-primary underline"
+                          onClick={() => { setShowDropdown(false); setShowNovaPessoa(true); }}
+                        >
+                          Criar nova
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Mini-form nova pessoa */}
+                {showNovaPessoa && (
+                  <div className="mt-2 p-3 border border-border rounded-lg bg-muted/30 space-y-2">
+                    <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <UserPlus size={13} /> Criar nova pessoa
+                    </p>
+                    <input
+                      className="dental-input w-full"
+                      placeholder="Nome *"
+                      value={novaPessoa.nome}
+                      onChange={e => setNovaPessoa(p => ({ ...p, nome: e.target.value }))}
+                      autoFocus
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        className="dental-input w-full"
+                        placeholder="E-mail"
+                        type="email"
+                        value={novaPessoa.email}
+                        onChange={e => setNovaPessoa(p => ({ ...p, email: e.target.value }))}
+                      />
+                      <input
+                        className="dental-input w-full"
+                        placeholder="Telefone"
+                        type="tel"
+                        value={novaPessoa.telefone}
+                        onChange={e => setNovaPessoa(p => ({ ...p, telefone: maskPhone(e.target.value) }))}
+                      />
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setShowNovaPessoa(false)}
+                        className="text-xs px-2.5 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!novaPessoa.nome.trim() || savingPessoa}
+                        onClick={handleSaveNovaPessoa}
+                        className="text-xs px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+                      >
+                        {savingPessoa ? 'Salvando...' : 'Criar pessoa'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -184,7 +322,7 @@ export default function NegocioFormDialog({ open, onClose, onSave, etapas, pesso
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={!nome.trim() || saving}>
+            <Button type="submit" disabled={!nome.trim() || !pessoaId || saving}>
               {saving ? 'Salvando...' : 'Criar Negócio'}
             </Button>
           </div>

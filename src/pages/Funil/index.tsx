@@ -61,7 +61,7 @@ export default function FunilPage({ onNavigate }: { onNavigate?: (p: string) => 
   const { leads, loading: loadingLeads, addLead, updateLead, deleteLead } = useLeads();
   const { funis, loading: loadingFunis, addFunil, updateFunil, deleteFunil } = useFunis();
   const { usuarios } = useUsuarios();
-  const { pessoas } = usePessoas();
+  const { pessoas, addPessoa } = usePessoas();
   const { usuario } = useAuth();
 
   const [selectedFunilId, setSelectedFunilId] = useState<string | null>(null);
@@ -490,6 +490,7 @@ export default function FunilPage({ onNavigate }: { onNavigate?: (p: string) => 
         pessoas={pessoas}
         usuarios={usuarios}
         funilId={selectedFunilId}
+        onAddPessoa={addPessoa}
       />
 
       {/* Detalhe do negócio */}

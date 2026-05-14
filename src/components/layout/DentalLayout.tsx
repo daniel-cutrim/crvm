@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { isGestor, isProfissional } from '@/utils/roles';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useConsultas, useTarefas } from '@/hooks/useData';
-import GlobalSearch from './GlobalSearch';
 import ReminderNotifications from '@/components/notifications/ReminderNotifications';
 
 interface LayoutProps {
@@ -217,16 +216,13 @@ export default function AppLayout({ children, currentPage, onPageChange }: Layou
       <div className={`flex-1 flex flex-col min-h-screen min-w-0 transition-all duration-200 ${collapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         {/* Top bar */}
         <header className="h-14 bg-card border-b border-border flex items-center justify-between px-4 lg:px-6 shrink-0 gap-3 sticky top-0 z-30">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex items-center gap-3">
             <button
               className="lg:hidden p-2 -ml-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu size={20} />
             </button>
-            <div className="hidden sm:block flex-1 min-w-0">
-              <GlobalSearch onNavigate={(page) => handlePageChange(page)} />
-            </div>
           </div>
           <div className="flex items-center gap-2">
             <ReminderNotifications consultas={consultas} tarefas={tarefas} />

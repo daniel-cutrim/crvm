@@ -312,6 +312,7 @@ export interface CampoCategoria {
   nome: string;
   funis_ids: string[];
   ordem: number;
+  is_sistema?: boolean;
   created_at: string;
   campos?: CampoPersonalizado[];
 }
@@ -324,6 +325,7 @@ export interface CampoPersonalizado {
   opcoes_lista: string[] | null;
   obrigatorio: boolean;
   ordem: number;
+  is_sistema?: boolean;
   created_at: string;
 }
 
