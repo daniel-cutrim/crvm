@@ -7,7 +7,6 @@ import Login from '@/pages/Login';
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const AgendaPage = lazy(() => import('@/pages/Agenda'));
 const CRMPage = lazy(() => import('@/pages/CRM'));
-const FinanceiroPage = lazy(() => import('@/pages/Financeiro'));
 const TarefasPage = lazy(() => import('@/pages/Tarefas'));
 const ConfiguracoesPage = lazy(() => import('@/pages/Configuracoes'));
 const MarketingPage = lazy(() => import('@/pages/Marketing'));
@@ -24,14 +23,14 @@ const PessoasPage = lazy(() =>
   import('@/pages/Pessoas').catch(() => ({ default: () => null as any }))
 );
 
-type Page = 'dashboard' | 'agenda' | 'funil' | 'pessoas' | 'atividades' | 'financeiro' | 'marketing' | 'chat' | 'configuracoes';
+type Page = 'dashboard' | 'agenda' | 'funil' | 'pessoas' | 'atividades' | 'marketing' | 'chat' | 'configuracoes';
 
 export default function IndexPage() {
   const { user, usuario, loading } = useAuth();
   const { page } = useParams<{ page: string }>();
   const navigate = useNavigate();
 
-  const validPages: Page[] = ['dashboard', 'agenda', 'funil', 'pessoas', 'atividades', 'financeiro', 'marketing', 'chat', 'configuracoes'];
+  const validPages: Page[] = ['dashboard', 'agenda', 'funil', 'pessoas', 'atividades', 'marketing', 'chat', 'configuracoes'];
   const initialPage = (page && validPages.includes(page as Page)) ? (page as Page) : 'dashboard';
 
   const [currentPage, setCurrentPage] = useState<Page>(initialPage);
@@ -71,7 +70,6 @@ export default function IndexPage() {
       case 'funil': return !isOnlyProfissional(papel) ? <FunilPage onNavigate={(p) => handlePageChange(p as Page)} /> : <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
       case 'pessoas': return !isOnlyProfissional(papel) ? <PessoasPage /> : <Dashboard onNavigate={(p) => handlePageChange(p as Page)} />;
       case 'atividades': return <AtividadesPage />;
-      case 'financeiro': return isGestor(papel) ? <FinanceiroPage /> : <Dashboard />;
       case 'marketing': return isGestor(papel) ? <MarketingPage /> : <Dashboard />;
       case 'chat': return (isGestor(papel) || papel === 'Recepção') ? <ChatPage /> : <Dashboard />;
       case 'configuracoes': return isGestor(papel) ? <ConfiguracoesPage /> : <Dashboard />;

@@ -61,7 +61,7 @@ export default function CRMPage({ onNavigate }: { onNavigate?: (page: string) =>
       } else {
         const { error } = await addLead({ 
           ...data, 
-          clinica_id: usuario?.clinica_id,
+          empresa_id: usuario?.empresa_id,
           funil_id: selectedFunilId
         });
         if (error) throw error;

@@ -116,7 +116,7 @@ export default function PessoasPage() {
           setDetailPessoa(prev => prev ? { ...prev, ...(data as Partial<Pessoa>) } : prev);
         }
       } else {
-        const { error } = await addPessoa({ ...data, clinica_id: usuario?.clinica_id });
+        const { error } = await addPessoa({ ...data, empresa_id: usuario?.empresa_id });
         if (error) throw error;
         toast.success('Pessoa cadastrada com sucesso!');
       }

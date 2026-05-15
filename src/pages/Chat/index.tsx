@@ -251,7 +251,7 @@ export default function ChatPage() {
       const { data: existing } = await supabase.from('chat_conversas')
         .select('*')
         .eq('phone', wppPhone)
-        .eq('clinica_id', usuario?.clinica_id)
+        .eq('empresa_id', usuario?.empresa_id)
         .maybeSingle();
 
       if (existing) {
@@ -261,7 +261,7 @@ export default function ChatPage() {
            .insert({
               phone: wppPhone,
               nome: `WhatsApp ${newChatPhone}`,
-              clinica_id: usuario?.clinica_id,
+              empresa_id: usuario?.empresa_id,
               setor_id: instance.setorId
            })
            .select()
@@ -393,7 +393,7 @@ export default function ChatPage() {
           message: newMessage,
           conversa_id: selectedConversa.id,
           type: 'text',
-          clinica_id: usuario?.clinica_id,
+          empresa_id: usuario?.empresa_id,
         }),
       });
 
@@ -427,7 +427,7 @@ export default function ChatPage() {
           conversa_id: selectedConversa.id,
           type: 'audio',
           base64_audio: base64,
-          clinica_id: usuario?.clinica_id,
+          empresa_id: usuario?.empresa_id,
         }),
       });
 

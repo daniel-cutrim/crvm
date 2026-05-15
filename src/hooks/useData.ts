@@ -4,12 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/utils/logger';
 import type { Database } from '@/integrations/supabase/types';
 import type {
-  Paciente, Consulta, Lead, PlanoTratamento, Receita, Despesa,
-  Tarefa, Usuario, ProcedimentoPadrao, Clinica, LeadHistorico,
+  Paciente, Consulta, Lead, PlanoTratamento,
+  Tarefa, Usuario, ProcedimentoPadrao, Empresa, LeadHistorico,
   PlanoTratamentoItem, NotificationSettings, PacienteDocumento,
-  ProntuarioEntrada, DespesaRecorrente, Integracao, LeadJornada,
+  ProntuarioEntrada, Integracao, LeadJornada,
   Setor, Funil, FunilEtapa, Pessoa, CampoCategoria, CampoPersonalizado,
-  CampoValor, LeadEtapaHistorico
+  CampoValor, LeadEtapaHistorico, Produto
 } from '@/types';
 import type { OdontogramaEntrada } from '@/types/odontograma';
 
@@ -31,18 +31,18 @@ function useSupabaseTable<T extends { id: string }>(
     const sb = supabase;
     let query = sb.from(table).select(selectQuery);
 
-    if (usuario?.clinica_id) {
-      if (table === 'clinica') {
-        query = (query as any).eq('id', usuario.clinica_id);
+    if (usuario?.empresa_id) {
+      if (table === 'empresa') {
+        query = (query as any).eq('id', usuario.empresa_id);
       } else if (table !== 'usuario_setores') {
-        query = (query as any).eq('clinica_id', usuario.clinica_id);
+        query = (query as any).eq('empresa_id', usuario.empresa_id);
       }
     }
 
     const { data: result } = await query.order(orderBy, { ascending });
     setData((result as unknown as T[] | null) || []);
     setLoading(false);
-  }, [table, selectQuery, orderBy, ascending, usuario?.clinica_id]);
+  }, [table, selectQuery, orderBy, ascending, usuario?.empresa_id]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
@@ -55,12 +55,12 @@ function useSupabaseTable<T extends { id: string }>(
       logger.info(`Create ${table}`, { 
         tabela: table, 
         registro_id: (result as any).id, 
-        clinica_id: usuario?.clinica_id, 
+        empresa_id: usuario?.empresa_id, 
         usuario_id: usuario?.id,
         detalhes: { item } 
       });
     } else if (error) {
-      logger.error(`Create Error ${table}`, { error, tabela: table, clinica_id: usuario?.clinica_id, usuario_id: usuario?.id });
+      logger.error(`Create Error ${table}`, { error, tabela: table, empresa_id: usuario?.empresa_id, usuario_id: usuario?.id });
     }
     return { data: result as unknown as T | null, error };
   };
@@ -74,12 +74,12 @@ function useSupabaseTable<T extends { id: string }>(
       logger.info(`Update ${table}`, { 
         tabela: table, 
         registro_id: id, 
-        clinica_id: usuario?.clinica_id, 
+        empresa_id: usuario?.empresa_id, 
         usuario_id: usuario?.id,
         detalhes: { updates } 
       });
     } else if (error) {
-      logger.error(`Update Error ${table}`, { error, tabela: table, registro_id: id, clinica_id: usuario?.clinica_id, usuario_id: usuario?.id });
+      logger.error(`Update Error ${table}`, { error, tabela: table, registro_id: id, empresa_id: usuario?.empresa_id, usuario_id: usuario?.id });
     }
     return { data: result as unknown as T | null, error };
   };
@@ -92,11 +92,11 @@ function useSupabaseTable<T extends { id: string }>(
       logger.info(`Delete ${table}`, { 
         tabela: table, 
         registro_id: id, 
-        clinica_id: usuario?.clinica_id, 
+        empresa_id: usuario?.empresa_id, 
         usuario_id: usuario?.id 
       });
     } else if (error) {
-      logger.error(`Delete Error ${table}`, { error, tabela: table, registro_id: id, clinica_id: usuario?.clinica_id, usuario_id: usuario?.id });
+      logger.error(`Delete Error ${table}`, { error, tabela: table, registro_id: id, empresa_id: usuario?.empresa_id, usuario_id: usuario?.id });
     }
     return { error };
   };
@@ -280,16 +280,6 @@ export function usePlanoItens(planoId: string | null) {
   return { itens, loading, fetchItens, addItem, updateItem, deleteItem };
 }
 
-export function useReceitas() {
-  const h = useSupabaseTable<Receita>('receitas', '*, paciente:pacientes(*)', 'data', false);
-  return { receitas: h.data, loading: h.loading, fetchReceitas: h.fetch, addReceita: h.add, updateReceita: h.update, deleteReceita: h.remove };
-}
-
-export function useDespesas() {
-  const h = useSupabaseTable<Despesa>('despesas', '*', 'data');
-  return { despesas: h.data, loading: h.loading, fetchDespesas: h.fetch, addDespesa: h.add, updateDespesa: h.update, deleteDespesa: h.remove };
-}
-
 export function useTarefas() {
   const h = useSupabaseTable<Tarefa>('tarefas', '*, paciente:pacientes(*), lead:leads(*), responsavel:usuarios!responsavel_id(*), pessoa:pessoas!pessoa_id(*)');
   return { tarefas: h.data, loading: h.loading, fetchTarefas: h.fetch, addTarefa: h.add, updateTarefa: h.update, deleteTarefa: h.remove };
@@ -305,30 +295,30 @@ export function useProcedimentosPadrao() {
   return { procedimentos: h.data, loading: h.loading, fetchProcedimentos: h.fetch, addProcedimento: h.add, updateProcedimento: h.update, deleteProcedimento: h.remove };
 }
 
-export function useClinica() {
-  const [clinica, setClinica] = useState<Clinica | null>(null);
+export function useEmpresa() {
+  const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-    const { data } = await supabase.from('clinica').select('*').limit(1).maybeSingle();
-      setClinica(data as Clinica | null);
+    const { data } = await supabase.from('empresa').select('*').limit(1).maybeSingle();
+      setEmpresa(data as Empresa | null);
       setLoading(false);
     })();
   }, []);
 
-  const updateClinica = async (id: string, updates: Record<string, unknown>) => {
-    const { data, error } = await (supabase.from('clinica') as any).update(updates).eq('id', id).select().single();
-    if (!error && data) setClinica(data as Clinica);
-    return { data: data as Clinica | null, error };
+  const updateEmpresa = async (id: string, updates: Record<string, unknown>) => {
+    const { data, error } = await (supabase.from('empresa') as any).update(updates).eq('id', id).select().single();
+    if (!error && data) setEmpresa(data as Empresa);
+    return { data: data as Empresa | null, error };
   };
-  const createClinica = async (item: Record<string, unknown>) => {
-    const { data, error } = await (supabase.from('clinica') as any).insert(item).select().single();
-    if (!error && data) setClinica(data as Clinica);
-    return { data: data as Clinica | null, error };
+  const createEmpresa = async (item: Record<string, unknown>) => {
+    const { data, error } = await (supabase.from('empresa') as any).insert(item).select().single();
+    if (!error && data) setEmpresa(data as Empresa);
+    return { data: data as Empresa | null, error };
   };
 
-  return { clinica, loading, updateClinica, createClinica };
+  return { empresa, loading, updateEmpresa, createEmpresa };
 }
 
 export function useNotificationSettings() {
@@ -453,11 +443,6 @@ export function useOdontograma(pacienteId: string | null) {
   return { entradas, loading, fetchEntradas, addEntrada, deleteEntrada };
 }
 
-export function useDespesasRecorrentes() {
-  const h = useSupabaseTable<DespesaRecorrente>('despesas_recorrentes', '*', 'descricao', true);
-  return { recorrentes: h.data, loading: h.loading, fetchRecorrentes: h.fetch, addRecorrente: h.add, updateRecorrente: h.update, deleteRecorrente: h.remove };
-}
-
 export function useIntegracoes() {
   const [integracoes, setIntegracoes] = useState<Integracao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -500,6 +485,18 @@ export function useIntegracoes() {
 export function useSetores() {
   const h = useSupabaseTable<Setor>('setores', '*', 'nome', true);
   return { setores: h.data, loading: h.loading, fetchSetores: h.fetch, addSetor: h.add, updateSetor: h.update, deleteSetor: h.remove };
+}
+
+export function useProdutos() {
+  const h = useSupabaseTable<Produto>('produtos', '*', 'nome', true);
+  return {
+    produtos: h.data,
+    loading: h.loading,
+    fetchProdutos: h.fetch,
+    addProduto: h.add,
+    updateProduto: h.update,
+    deleteProduto: h.remove,
+  };
 }
 
 export function useFunis() {
@@ -598,7 +595,7 @@ export function usePessoas() {
 
   const addPessoa = async (item: Record<string, unknown>) => {
     const { data, error } = await (supabase.from('pessoas') as any)
-      .insert({ ...item, clinica_id: usuario?.clinica_id })
+      .insert({ ...item, empresa_id: usuario?.empresa_id })
       .select().single();
     if (!error && data) setPessoas(prev => [...prev, data as unknown as Pessoa].sort((a, b) => a.nome.localeCompare(b.nome)));
     return { data: data as unknown as Pessoa | null, error };
@@ -685,7 +682,7 @@ export function useCamposCategorias() {
 
   const addCategoria = async (item: Record<string, unknown>) => {
     const { data, error } = await (supabase.from('campos_categorias') as any)
-      .insert({ ...item, clinica_id: usuario?.clinica_id })
+      .insert({ ...item, empresa_id: usuario?.empresa_id })
       .select('*, campos:campos_personalizados(*)').single();
     if (!error && data) setCategorias(prev => [...prev, data as unknown as CampoCategoria]);
     return { data: data as unknown as CampoCategoria | null, error };

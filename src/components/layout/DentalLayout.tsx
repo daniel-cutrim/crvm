@@ -1,11 +1,11 @@
 import { ReactNode, useState, useEffect } from 'react';
 import {
   LayoutDashboard, Users, Filter, ClipboardList,
-  DollarSign, CheckSquare, Settings, LogOut, Menu, X, Megaphone, MessageSquare,
+  CheckSquare, Settings, LogOut, Menu, X, Megaphone, MessageSquare,
   PanelLeftClose, PanelLeftOpen, Sun, Moon,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { isGestor, isProfissional } from '@/utils/roles';
+import { isGestor } from '@/utils/roles';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useConsultas, useTarefas } from '@/hooks/useData';
 import ReminderNotifications from '@/components/notifications/ReminderNotifications';
@@ -23,7 +23,6 @@ const allMenuItems = [
   { id: 'atividades', label: 'Atividades', icon: CheckSquare, roles: ['Gestor', 'Profissional', 'Recepção', 'Gestor/Profissional'] },
   { id: 'chat', label: 'WhatsApp', icon: MessageSquare, roles: ['Gestor', 'Recepção', 'Gestor/Profissional'] },
   { id: 'marketing', label: 'Marketing', icon: Megaphone, roles: ['Gestor', 'Gestor/Profissional'] },
-  { id: 'financeiro', label: 'Financeiro', icon: DollarSign, roles: ['Gestor', 'Gestor/Profissional'] },
   { id: 'configuracoes', label: 'Configurações', icon: Settings, roles: ['Gestor', 'Gestor/Profissional'] },
 ];
 
@@ -61,14 +60,14 @@ export default function AppLayout({ children, currentPage, onPageChange }: Layou
   };
 
   useEffect(() => {
-    if (usuario?.clinica?.cor_primaria) {
-      document.documentElement.style.setProperty('--primary', usuario.clinica.cor_primaria);
+    if (usuario?.empresa?.cor_primaria) {
+      document.documentElement.style.setProperty('--primary', usuario.empresa.cor_primaria);
     }
-  }, [usuario?.clinica?.cor_primaria]);
+  }, [usuario?.empresa?.cor_primaria]);
 
-  const clinicaNome = usuario?.clinica?.nome || 'CRVM';
-  const clinicaLogo = usuario?.clinica?.logo_url;
-  const clinicaIniciais = clinicaNome.substring(0, 2).toUpperCase();
+  const empresaNome = usuario?.empresa?.nome || 'CRVM';
+  const empresaLogo = usuario?.empresa?.logo_url;
+  const empresaIniciais = empresaNome.substring(0, 2).toUpperCase();
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -90,18 +89,18 @@ export default function AppLayout({ children, currentPage, onPageChange }: Layou
         {/* Header */}
         <div className="h-14 px-3 border-b flex items-center justify-between shrink-0" style={{ borderColor: 'hsl(var(--sidebar-border))' }}>
           <div className={`flex items-center gap-3 min-w-0 overflow-hidden ${collapsed ? 'lg:justify-center lg:w-full' : ''}`}>
-            {clinicaLogo ? (
-              <img src={clinicaLogo} alt={clinicaNome} className="w-8 h-8 rounded-lg object-contain bg-white shrink-0" />
+            {empresaLogo ? (
+              <img src={empresaLogo} alt={empresaNome} className="w-8 h-8 rounded-lg object-contain bg-white shrink-0" />
             ) : (
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
-                <span className="text-primary-foreground font-bold text-[10px]">{clinicaIniciais}</span>
+                <span className="text-primary-foreground font-bold text-[10px]">{empresaIniciais}</span>
               </div>
             )}
             <h1
               className={`font-semibold text-sm truncate whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : ''}`}
               style={{ color: 'hsl(var(--sidebar-text-active))' }}
             >
-              {clinicaNome}
+              {empresaNome}
             </h1>
           </div>
           {/* Mobile close */}

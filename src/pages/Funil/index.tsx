@@ -137,7 +137,7 @@ export default function FunilPage({ onNavigate }: { onNavigate?: (p: string) => 
     try {
       const { error } = await addLead({
         ...data,
-        clinica_id: usuario?.clinica_id,
+        empresa_id: usuario?.empresa_id,
         funil_id: selectedFunilId,
       });
       if (error) throw error;
@@ -158,7 +158,7 @@ export default function FunilPage({ onNavigate }: { onNavigate?: (p: string) => 
     setCreatingPipeline(true);
     const { data, error } = await addFunil({
       nome: newPipelineNome.trim(),
-      clinica_id: usuario?.clinica_id,
+      empresa_id: usuario?.empresa_id,
     });
     setCreatingPipeline(false);
     if (!error && data) {

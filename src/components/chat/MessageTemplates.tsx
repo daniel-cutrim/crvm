@@ -12,7 +12,7 @@ import { confirmDialog } from '@/components/ui/confirm-dialog';
 
 export interface MessageTemplate {
   id: string;
-  clinica_id: string;
+  empresa_id: string;
   titulo: string;
   conteudo: string;
   categoria: string | null;
@@ -27,23 +27,23 @@ export function useMessageTemplates() {
   const [loading, setLoading] = useState(true);
 
   const fetchTemplates = useCallback(async () => {
-    if (!usuario?.clinica_id) return;
+    if (!usuario?.empresa_id) return;
     setLoading(true);
     const { data } = await supabase
       .from('chat_modelos_mensagem')
       .select('*')
-      .eq('clinica_id', usuario.clinica_id)
+      .eq('empresa_id', usuario.empresa_id)
       .order('titulo', { ascending: true });
     setTemplates((data as MessageTemplate[] | null) || []);
     setLoading(false);
-  }, [usuario?.clinica_id]);
+  }, [usuario?.empresa_id]);
 
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
 
   const addTemplate = async (item: Partial<MessageTemplate>) => {
     const { data, error } = await supabase
       .from('chat_modelos_mensagem')
-      .insert({ ...item, clinica_id: usuario?.clinica_id })
+      .insert({ ...item, empresa_id: usuario?.empresa_id })
       .select()
       .single();
     if (!error && data) {

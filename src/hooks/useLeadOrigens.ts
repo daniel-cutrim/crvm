@@ -9,26 +9,26 @@ export function useLeadOrigens() {
   const [loading, setLoading] = useState(true);
 
   const fetchOrigens = useCallback(async () => {
-    if (!usuario?.clinica_id) return;
+    if (!usuario?.empresa_id) return;
     setLoading(true);
     const { data } = await supabase
       .from('lead_origens')
       .select('*')
-      .eq('clinica_id', usuario.clinica_id)
+      .eq('empresa_id', usuario.empresa_id)
       .order('ordem', { ascending: true });
     setOrigens((data || []) as LeadOrigem[]);
     setLoading(false);
-  }, [usuario?.clinica_id]);
+  }, [usuario?.empresa_id]);
 
   useEffect(() => { fetchOrigens(); }, [fetchOrigens]);
 
   const addOrigem = async (nome: string) => {
-    if (!usuario?.clinica_id) return { error: new Error('No clinica') };
+    if (!usuario?.empresa_id) return { error: new Error('No clinica') };
     const maxOrdem = origens.reduce((max, o) => Math.max(max, o.ordem), 0);
     const { data, error } = await supabase
       .from('lead_origens')
       .insert({
-        clinica_id: usuario.clinica_id,
+        empresa_id: usuario.empresa_id,
         nome,
         ordem: maxOrdem + 1,
         ativo: true,

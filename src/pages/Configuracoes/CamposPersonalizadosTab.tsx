@@ -157,7 +157,7 @@ export default function CamposPersonalizadosTab() {
           nome: catForm.nome.trim(),
           funis_ids: catForm.funis_ids,
           ordem: categorias.length + 1,
-          clinica_id: usuario?.clinica_id,
+          empresa_id: usuario?.empresa_id,
         });
         if (error) throw error;
         toast.success('Categoria criada!');

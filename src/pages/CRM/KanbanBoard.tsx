@@ -35,7 +35,7 @@ export default function KanbanBoard({ leads, etapas, onLeadClick, onMoveEtapa }:
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const { usuario } = useAuth();
-  const clinicaNome = usuario?.clinica?.nome || 'MedROI';
+  const clinicaNome = usuario?.empresa?.nome || 'MedROI';
 
   const columns = useMemo(() => {
     return etapas.map(etapa => ({

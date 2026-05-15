@@ -46,7 +46,7 @@ export default function ChatFilterBar({ filters, onChange }: Props) {
       const { data: funis } = await supabase
         .from('funis')
         .select('id')
-        .eq('clinica_id', usuario?.clinica_id);
+        .eq('empresa_id', usuario?.empresa_id);
 
       if (!funis || funis.length === 0) {
         setDynamicEtapas(ETAPAS_FALLBACK);
@@ -74,8 +74,8 @@ export default function ChatFilterBar({ filters, onChange }: Props) {
       }
     }
 
-    if (usuario?.clinica_id) loadEtapas();
-  }, [usuario?.clinica_id]);
+    if (usuario?.empresa_id) loadEtapas();
+  }, [usuario?.empresa_id]);
 
   function toggleEtapa(etapa: string) {
     const next = filters.etapas.includes(etapa)

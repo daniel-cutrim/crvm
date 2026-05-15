@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useClinica } from '@/hooks/useData';
+import { useEmpresa } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -126,7 +126,7 @@ function ColorPickerField({ label, hslValue, onChange }: ColorPickerFieldProps) 
 }
 
 export default function ClinicaTab() {
-  const { clinica, loading, updateClinica, createClinica } = useClinica();
+  const { empresa, loading, updateEmpresa, createEmpresa } = useEmpresa();
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,19 +143,19 @@ export default function ClinicaTab() {
   });
 
   useEffect(() => {
-    if (clinica) {
+    if (empresa) {
       setForm({
-        nome: clinica.nome || '',
-        cnpj: clinica.cnpj || '',
-        endereco: clinica.endereco || '',
-        telefone: clinica.telefone || '',
-        email: clinica.email || '',
-        logo_url: clinica.logo_url || '',
-        cor_primaria: clinica.cor_primaria || '199 89% 38%',
-        cor_secundaria: clinica.cor_secundaria || '199 89% 28%',
+        nome: empresa.nome || '',
+        cnpj: empresa.cnpj || '',
+        endereco: empresa.endereco || '',
+        telefone: empresa.telefone || '',
+        email: empresa.email || '',
+        logo_url: empresa.logo_url || '',
+        cor_primaria: empresa.cor_primaria || '199 89% 38%',
+        cor_secundaria: empresa.cor_secundaria || '199 89% 28%',
       });
     }
-  }, [clinica]);
+  }, [empresa]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -173,7 +173,7 @@ export default function ClinicaTab() {
     setUploading(true);
     try {
       const ext = file.name.split('.').pop();
-      const fileName = `logo_${clinica?.id || 'new'}_${Date.now()}.${ext}`;
+      const fileName = `logo_${empresa?.id || 'new'}_${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from('logos')
@@ -201,16 +201,16 @@ export default function ClinicaTab() {
     }
     setSaving(true);
     try {
-      if (clinica) {
-        const { error } = await updateClinica(clinica.id, form);
+      if (empresa) {
+        const { error } = await updateEmpresa(empresa.id, form);
         if (error) {
-          console.error('[ClinicaTab] Erro ao atualizar clínica:', error);
+          console.error('[ClinicaTab] Erro ao atualizar empresa:', error);
           throw error;
         }
       } else {
-        const { error } = await createClinica(form);
+        const { error } = await createEmpresa(form);
         if (error) {
-          console.error('[ClinicaTab] Erro ao criar clínica:', error);
+          console.error('[ClinicaTab] Erro ao criar empresa:', error);
           throw error;
         }
       }

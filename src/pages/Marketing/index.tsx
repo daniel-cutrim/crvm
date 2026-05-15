@@ -15,7 +15,7 @@ import {
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, eachMonthOfInterval, isBefore, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useLeads, useReceitas } from '@/hooks/useData';
+import { useLeads } from '@/hooks/useData';
 import { useMarketingInvestimentos, useMarketingMetas } from '@/hooks/useMarketing';
 import InvestimentoFormDialog from './InvestimentoFormDialog';
 import MetaFormDialog from './MetaFormDialog';
@@ -38,7 +38,6 @@ function formatCurrency(v: number) {
 
 export default function MarketingPage() {
   const { leads } = useLeads();
-  const { receitas } = useReceitas();
   const { investimentos, loading, addInvestimento, deleteInvestimento } = useMarketingInvestimentos();
   const { metas, addMeta } = useMarketingMetas();
 
@@ -84,16 +83,18 @@ export default function MarketingPage() {
 
       const converted = monthLeads.filter(l => l.convertido_paciente_id);
 
-      const monthReceitas = receitas.filter(r => {
-        const d = parseISO(r.data);
+      const ganhosMes = leads.filter(l => {
+        if (l.resultado !== 'ganho' || !l.resultado_at) return false;
+        const d = parseISO(l.resultado_at);
         return d >= start && d <= end;
       });
-      const receitaTotal = monthReceitas.reduce((sum, r) => sum + Number(r.valor), 0);
+      const valorColetadoMes = ganhosMes.reduce((s, l) => s + Number(l.valor_coletado || 0), 0);
+      const valorContratoMes = ganhosMes.reduce((s, l) => s + Number(l.valor_contrato || 0), 0);
 
       const monthInvestimentos = investimentos.filter(inv => inv.mes.startsWith(monthKey));
       const investimentoTotal = monthInvestimentos.reduce((sum, inv) => sum + Number(inv.valor_investido), 0);
 
-      const roi = investimentoTotal > 0 ? ((receitaTotal - investimentoTotal) / investimentoTotal) * 100 : 0;
+      const roi = investimentoTotal > 0 ? ((valorColetadoMes - investimentoTotal) / investimentoTotal) * 100 : 0;
       const cac = converted.length > 0 ? investimentoTotal / converted.length : 0;
       const meta = metas.find(m => m.mes.startsWith(monthKey));
 
@@ -103,21 +104,22 @@ export default function MarketingPage() {
         leads: monthLeads.length,
         conversoes: converted.length,
         taxaConversao: monthLeads.length > 0 ? (converted.length / monthLeads.length) * 100 : 0,
-        receita: receitaTotal,
+        valorColetado: valorColetadoMes,
+        valorContrato: valorContratoMes,
         investimento: investimentoTotal,
         roi,
         cac,
         meta,
       };
     });
-  }, [leads, receitas, investimentos, metas, monthsList]);
+  }, [leads, investimentos, metas, monthsList]);
 
   // Current month data
   const currentMonth = monthlyData[monthlyData.length - 1];
 
   // Per-channel breakdown for current period
   const channelData = useMemo(() => {
-    const channelMap: Record<string, { investimento: number; leads: number; conversoes: number; receita: number }> = {};
+    const channelMap: Record<string, { investimento: number; leads: number; conversoes: number; valorColetado: number }> = {};
 
     const start = rangeStart;
     const end = rangeEnd;
@@ -126,7 +128,7 @@ export default function MarketingPage() {
     investimentos.forEach(inv => {
       const d = parseISO(inv.mes);
       if (d >= start && d <= end) {
-        if (!channelMap[inv.canal]) channelMap[inv.canal] = { investimento: 0, leads: 0, conversoes: 0, receita: 0 };
+        if (!channelMap[inv.canal]) channelMap[inv.canal] = { investimento: 0, leads: 0, conversoes: 0, valorColetado: 0 };
         channelMap[inv.canal].investimento += Number(inv.valor_investido);
       }
     });
@@ -136,9 +138,10 @@ export default function MarketingPage() {
       const d = parseISO(l.created_at);
       if (d >= start && d <= end && l.origem) {
         const canal = l.origem;
-        if (!channelMap[canal]) channelMap[canal] = { investimento: 0, leads: 0, conversoes: 0, receita: 0 };
+        if (!channelMap[canal]) channelMap[canal] = { investimento: 0, leads: 0, conversoes: 0, valorColetado: 0 };
         channelMap[canal].leads += 1;
         if (l.convertido_paciente_id) channelMap[canal].conversoes += 1;
+        if (l.resultado === 'ganho') channelMap[canal].valorColetado += Number(l.valor_coletado || 0);
       }
     });
 
@@ -146,7 +149,7 @@ export default function MarketingPage() {
       canal,
       ...data,
       cac: data.conversoes > 0 ? data.investimento / data.conversoes : 0,
-      roi: data.investimento > 0 ? ((data.receita - data.investimento) / data.investimento) * 100 : 0,
+      roi: data.investimento > 0 ? ((data.valorColetado - data.investimento) / data.investimento) * 100 : 0,
       taxaConversao: data.leads > 0 ? (data.conversoes / data.leads) * 100 : 0,
     }));
   }, [leads, investimentos, rangeStart, rangeEnd]);
@@ -154,12 +157,13 @@ export default function MarketingPage() {
   // Totals
   const totals = useMemo(() => {
     const totalInvestimento = monthlyData.reduce((s, m) => s + m.investimento, 0);
-    const totalReceita = monthlyData.reduce((s, m) => s + m.receita, 0);
+    const totalColetado = monthlyData.reduce((s, m) => s + m.valorColetado, 0);
+    const totalContrato = monthlyData.reduce((s, m) => s + m.valorContrato, 0);
     const totalLeads = monthlyData.reduce((s, m) => s + m.leads, 0);
     const totalConversoes = monthlyData.reduce((s, m) => s + m.conversoes, 0);
-    const roi = totalInvestimento > 0 ? ((totalReceita - totalInvestimento) / totalInvestimento) * 100 : 0;
+    const roi = totalInvestimento > 0 ? ((totalColetado - totalInvestimento) / totalInvestimento) * 100 : 0;
     const cac = totalConversoes > 0 ? totalInvestimento / totalConversoes : 0;
-    return { totalInvestimento, totalReceita, totalLeads, totalConversoes, roi, cac };
+    return { totalInvestimento, totalColetado, totalContrato, totalLeads, totalConversoes, roi, cac };
   }, [monthlyData]);
 
   const handleDeleteInvestimento = async (id: string) => {
@@ -248,10 +252,10 @@ export default function MarketingPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-              <DollarSign className="h-3.5 w-3.5" /> Receita Gerada
+              <DollarSign className="h-3.5 w-3.5" /> Valor Coletado
             </div>
-            <p className="text-xl font-bold">{formatCurrency(totals.totalReceita)}</p>
-            <p className="text-[10px] text-muted-foreground">Período selecionado</p>
+            <p className="text-xl font-bold">{formatCurrency(totals.totalColetado)}</p>
+            <p className="text-[10px] text-muted-foreground">Negócios ganhos</p>
           </CardContent>
         </Card>
         <Card>
@@ -337,10 +341,10 @@ export default function MarketingPage() {
 
       {/* Charts Row 1: Trends */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* ROI & Investment Trend */}
+        {/* Investment vs Collected Value Trend */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Investimento vs Receita (Tendência)</CardTitle>
+            <CardTitle className="text-sm">Investimento vs Valor Coletado (Tendência)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[280px]">
@@ -355,7 +359,8 @@ export default function MarketingPage() {
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="investimento" name="Investimento" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="receita" name="Receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="valorColetado" name="Valor Coletado" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="valorContrato" name="Valor Contrato" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

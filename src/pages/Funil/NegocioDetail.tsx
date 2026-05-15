@@ -10,8 +10,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   useLeadHistorico, useLeadEtapaHistorico, useCamposCategorias, useCamposValores,
-  useUsuarios,
+  useUsuarios, useProdutos,
 } from '@/hooks/useData';
+import GanhoDialog from '@/components/ui/GanhoDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { confirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
@@ -56,6 +57,9 @@ interface Props {
 export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClose, onUpdateLead, onDelete }: Props) {
   const { usuario } = useAuth();
   const { usuarios } = useUsuarios();
+
+  const { produtos, addProduto } = useProdutos();
+  const [showGanhoDialog, setShowGanhoDialog] = useState(false);
 
   const { historico, addHistorico } = useLeadHistorico(lead?.id || null);
   const { historico: etapaHistorico } = useLeadEtapaHistorico(lead?.id || null);
@@ -108,11 +112,30 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
     toast.success('Valor atualizado');
   }, [lead, valorEdit, onUpdateLead]);
 
-  const handleGanho = useCallback(async () => {
+  const handleGanho = useCallback(() => {
     if (!lead) return;
-    await onUpdateLead(lead.id, { resultado: 'ganho', resultado_at: new Date().toISOString() });
+    setShowGanhoDialog(true);
+  }, [lead]);
+
+  const confirmGanho = useCallback(async (data: {
+    valor_coletado: number;
+    valor_contrato: number;
+    produtos_interesse: string[];
+  }) => {
+    if (!lead) return;
+    await onUpdateLead(lead.id, {
+      resultado: 'ganho',
+      resultado_at: new Date().toISOString(),
+      valor_coletado: data.valor_coletado,
+      valor_contrato: data.valor_contrato,
+      produtos_interesse: data.produtos_interesse,
+    });
     toast.success('Negócio marcado como ganho!');
   }, [lead, onUpdateLead]);
+
+  const handleAddProduto = useCallback(async (nome: string) => {
+    return await addProduto({ nome, ativo: true });
+  }, [addProduto]);
 
   const handlePerdido = useCallback(async () => {
     if (!lead) return;
@@ -725,6 +748,14 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
           </div>
         </div>
       </div>
+
+      <GanhoDialog
+        open={showGanhoDialog}
+        onClose={() => setShowGanhoDialog(false)}
+        onConfirm={confirmGanho}
+        produtos={produtos}
+        onAddProduto={handleAddProduto}
+      />
 
       {/* Modal motivo perda */}
       {showMotivoModal && (

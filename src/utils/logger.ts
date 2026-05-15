@@ -9,7 +9,7 @@ export interface LogEntry {
   registro_id?: string;
   detalhes?: Record<string, unknown>;
   usuario_id?: string;
-  clinica_id?: string;
+  empresa_id?: string;
 }
 
 class LoggerService {
@@ -33,7 +33,7 @@ class LoggerService {
 
       const { data: userData } = await supabase
         .from('usuarios')
-        .select('id, clinica_id')
+        .select('id, empresa_id')
         .eq('auth_user_id', session.user.id)
         .single();
         
@@ -70,7 +70,7 @@ class LoggerService {
       registro_id: customDetails?.registro_id || undefined,
       detalhes: customDetails?.detalhes ? customDetails.detalhes : { ...customDetails, path, timestamp },
       usuario_id: customDetails?.usuario_id || sessionInfo?.id,
-      clinica_id: customDetails?.clinica_id || sessionInfo?.clinica_id
+      empresa_id: customDetails?.empresa_id || sessionInfo?.empresa_id
     };
 
     this.queue.push(entry);

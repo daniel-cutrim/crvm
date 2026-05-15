@@ -14,24 +14,51 @@ import { Users, Plus, Pencil, Loader2, Calendar as CalendarIcon } from 'lucide-r
 import { toast } from 'sonner';
 import type { Usuario } from '@/types';
 import { useClinicaConfig } from '@/hooks/useClinicaConfig';
-import { isProfissional } from '@/utils/roles';
+import { isGestor } from '@/utils/roles';
+
+const PERMISSOES_CONFIG = [
+  { key: 'ver_dashboard', label: 'Ver Dashboard (métricas e gráficos)' },
+  { key: 'ver_funil', label: 'Visualizar Funil de Vendas' },
+  { key: 'editar_negocios', label: 'Criar e editar Negócios' },
+  { key: 'fechar_negocios', label: 'Marcar Negócios como Ganho/Perdido' },
+  { key: 'ver_pessoas', label: 'Visualizar Pessoas/Contatos' },
+  { key: 'editar_pessoas', label: 'Criar e editar Pessoas' },
+  { key: 'ver_marketing', label: 'Visualizar Marketing e relatórios' },
+  { key: 'editar_marketing', label: 'Editar Investimentos e Metas' },
+  { key: 'acessar_chat', label: 'Acessar Chat/WhatsApp' },
+  { key: 'ver_agenda', label: 'Visualizar Agenda' },
+  { key: 'gerenciar_usuarios', label: 'Gerenciar Usuários do sistema' },
+] as const;
+
+const defaultPermissoes = {
+  ver_dashboard: false,
+  ver_funil: false,
+  editar_negocios: false,
+  fechar_negocios: false,
+  ver_pessoas: false,
+  editar_pessoas: false,
+  ver_marketing: false,
+  editar_marketing: false,
+  acessar_chat: false,
+  ver_agenda: false,
+  gerenciar_usuarios: false,
+};
 
 export default function UsuariosTab() {
   const { usuarios, loading, addUsuario, updateUsuario } = useUsuarios();
   const { usuario } = useAuth();
   const { labelProfissional } = useClinicaConfig();
-  
+
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Usuario | null>(null);
   const [saving, setSaving] = useState(false);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
-  const [form, setForm] = useState({ nome: '', email: '', papel: 'Recepção' as string, setores_ids: [] as string[] });
-  
-  // Fetch setores for association
-  const [setores, setSetores] = useState<{id: string, nome: string}[]>([]);
-  useEffect(() => {
-    supabase.from('setores').select('id, nome').then(({ data }) => setSetores(data || []));
-  }, []);
+  const [form, setForm] = useState({
+    nome: '',
+    email: '',
+    papel: 'Comercial' as string,
+    permissoes: { ...defaultPermissoes },
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -42,10 +69,10 @@ export default function UsuariosTab() {
   }, []);
 
   const handleConnectGoogle = async () => {
-    if (!editing || !usuario?.clinica_id) return;
+    if (!editing || !usuario?.empresa_id) return;
     setConnectingGoogle(true);
     try {
-      const { data, error } = await supabase.functions.invoke(`google-calendar-auth?action=url&dentista_id=${editing.id}&clinica_id=${usuario.clinica_id}`, {
+      const { data, error } = await supabase.functions.invoke(`google-calendar-auth?action=url&dentista_id=${editing.id}&empresa_id=${usuario.empresa_id}`, {
         method: 'GET',
       });
       if (error) throw error;
@@ -61,20 +88,18 @@ export default function UsuariosTab() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ nome: '', email: '', papel: 'Recepção', setores_ids: [] });
+    setForm({ nome: '', email: '', papel: 'Comercial', permissoes: { ...defaultPermissoes } });
     setOpen(true);
   };
 
-  const openEdit = async (u: Usuario) => {
+  const openEdit = (u: Usuario) => {
     setEditing(u);
-    let setores_ids: string[] = [];
-    try {
-      const { data } = await supabase.from('usuario_setores').select('setor_id').eq('usuario_id', u.id);
-      if (data) setores_ids = data.map(d => d.setor_id);
-    } catch(e) {
-      console.warn('Erro ao buscar setores', e);
-    }
-    setForm({ nome: u.nome, email: u.email, papel: u.papel, setores_ids });
+    setForm({
+      nome: u.nome,
+      email: u.email,
+      papel: u.papel,
+      permissoes: { ...defaultPermissoes, ...(u.permissoes || {}) },
+    });
     setOpen(true);
   };
 
@@ -85,34 +110,27 @@ export default function UsuariosTab() {
     }
     setSaving(true);
     try {
-      let newUserId = editing?.id;
+      const permissoesToSave = isGestor(form.papel) ? null : form.permissoes;
 
       if (editing) {
-        const { error } = await updateUsuario(editing.id, { nome: form.nome, email: form.email, papel: form.papel });
+        const { error } = await updateUsuario(editing.id, {
+          nome: form.nome,
+          email: form.email,
+          papel: form.papel,
+          permissoes: permissoesToSave,
+        });
         if (error) throw error;
         toast.success('Usuário atualizado');
       } else {
-        const { data, error } = await addUsuario({ nome: form.nome, email: form.email, papel: form.papel });
+        const { error } = await addUsuario({
+          nome: form.nome,
+          email: form.email,
+          papel: form.papel,
+          permissoes: permissoesToSave,
+        });
         if (error) throw error;
-        newUserId = data?.id;
         toast.success('Usuário criado');
       }
-
-      // Sync Setores
-      if (newUserId && form.setores_ids) {
-        // Delete all bindings first
-        await supabase.from('usuario_setores').delete().eq('usuario_id', newUserId);
-        
-        // Insert new bindings
-        if (form.setores_ids.length > 0) {
-          const insertData = form.setores_ids.map(sId => ({
-            usuario_id: newUserId,
-            setor_id: sId
-          }));
-          await supabase.from('usuario_setores').insert(insertData);
-        }
-      }
-
       setOpen(false);
     } catch {
       toast.error('Erro ao salvar usuário');
@@ -126,12 +144,10 @@ export default function UsuariosTab() {
     else toast.success(u.ativo ? 'Usuário desativado' : 'Usuário ativado');
   };
 
-  const papeisDisponiveis = ['Gestor', 'Profissional', 'Gestor/Profissional', 'Recepção'];
+  const papeisDisponiveis = ['Gestor', 'Comercial'];
 
   const papelColor = (p: string) => {
     if (p === 'Gestor') return 'bg-primary/10 text-primary border-primary/20';
-    if (p === 'Dentista' || p === 'Profissional') return 'bg-blue-50 text-blue-700 border-blue-200';
-    if (p === 'Gestor/Dentista' || p === 'Gestor/Profissional') return 'bg-indigo-50 text-indigo-700 border-indigo-200';
     return 'bg-amber-50 text-amber-700 border-amber-200';
   };
 
@@ -216,42 +232,38 @@ export default function UsuariosTab() {
               </Select>
             </div>
 
-            {setores.length > 0 && (
-              <div className="space-y-2 pt-2 border-t mt-4">
-                <Label>Setores de Atuação</Label>
-                <p className="text-xs text-muted-foreground mb-2">Selecione os setores que este usuário terá acesso para visualizar conversas e leads.</p>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {setores.map(setor => (
-                    <label key={setor.id} className="flex items-center gap-2 text-sm">
-                      <input 
-                        type="checkbox" 
-                        checked={form.setores_ids.includes(setor.id)}
-                        onChange={(e) => {
-                          const isChecked = e.target.checked;
-                          setForm(f => ({
-                            ...f, 
-                            setores_ids: isChecked 
-                              ? [...f.setores_ids, setor.id] 
-                              : f.setores_ids.filter(id => id !== setor.id)
-                          }));
-                        }}
-                        className="rounded border-gray-300"
+            {/* Permissoes — apenas para nao-Gestores */}
+            {!isGestor(form.papel) && (
+              <div className="space-y-3 pt-2 border-t mt-4">
+                <Label className="text-sm font-semibold">Permissões de Acesso</Label>
+                <p className="text-xs text-muted-foreground">Selecione o que este usuário pode visualizar e editar.</p>
+                <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                  {PERMISSOES_CONFIG.map(({ key, label }) => (
+                    <label key={key} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/30 p-1.5 rounded">
+                      <input
+                        type="checkbox"
+                        checked={!!(form.permissoes as any)[key]}
+                        onChange={(e) => setForm(f => ({
+                          ...f,
+                          permissoes: { ...f.permissoes, [key]: e.target.checked },
+                        }))}
+                        className="rounded border-gray-300 h-4 w-4"
                       />
-                      {setor.nome}
+                      {label}
                     </label>
                   ))}
                 </div>
               </div>
             )}
-            
-            {isProfissional(form.papel) && editing && (
+
+            {form.papel !== 'Gestor' && editing && (
               <div className="space-y-2 pt-2 border-t mt-4">
                 <Label>Integração com Agenda</Label>
                 <div className="flex items-center gap-3 mt-1">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full gap-2" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full gap-2"
                     onClick={handleConnectGoogle}
                     disabled={connectingGoogle}
                   >

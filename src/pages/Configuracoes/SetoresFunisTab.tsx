@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { useSetores, useFunis, useFunilEtapas } from '@/hooks/useData';
+import { useFunis, useFunilEtapas, useProdutos } from '@/hooks/useData';
 import { useLeadOrigens } from '@/hooks/useLeadOrigens';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Save, Trash2, Edit2, Network, Columns, Loader2, Globe2 } from 'lucide-react';
+import { Plus, Save, Trash2, Edit2, ShoppingBag, Columns, Loader2, Globe2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Setor, Funil, FunilEtapa } from '@/types';
+import type { Funil, FunilEtapa } from '@/types';
 
 // ─── Funnel Stages Sub-component ───
 function FunilDetalhes({ funilId }: { funilId: string }) {
@@ -30,7 +30,7 @@ function FunilDetalhes({ funilId }: { funilId: string }) {
           nome: form.nome,
           cor: form.cor,
           ordem: etapas.length + 1,
-          clinica_id: usuario?.clinica_id
+          empresa_id: usuario?.empresa_id
         });
         if (error) throw error;
       }
@@ -91,15 +91,9 @@ function FunilDetalhes({ funilId }: { funilId: string }) {
 
 // ─── Main Unified Tab ───
 export default function SetoresFunisTab() {
-  const { setores, loading: loadingSetores, addSetor, updateSetor, deleteSetor } = useSetores();
   const { funis, loading: loadingFunis, addFunil, updateFunil, deleteFunil } = useFunis();
   const { origens, loading: loadingOrigens, addOrigem, updateOrigem, deleteOrigem } = useLeadOrigens();
   const { usuario } = useAuth();
-
-  // Setores form
-  const [setorForm, setSetorForm] = useState({ nome: '', descricao: '' });
-  const [editingSetorId, setEditingSetorId] = useState<string | null>(null);
-  const [savingSetor, setSavingSetor] = useState(false);
 
   // Funis form
   const [funilForm, setFunilForm] = useState({ nome: '', descricao: '' });
@@ -111,34 +105,27 @@ export default function SetoresFunisTab() {
   const [novaOrigem, setNovaOrigem] = useState('');
   const [savingOrigem, setSavingOrigem] = useState(false);
 
-  // ── Setores handlers ──
-  const resetSetorForm = () => { setSetorForm({ nome: '', descricao: '' }); setEditingSetorId(null); };
+  // Produtos
+  const { produtos, addProduto, updateProduto, deleteProduto } = useProdutos();
+  const [novoProduto, setNovoProduto] = useState('');
+  const [savingProduto, setSavingProduto] = useState(false);
+  const [editandoProduto, setEditandoProduto] = useState<string | null>(null);
+  const [editNomeProduto, setEditNomeProduto] = useState('');
 
-  const handleSaveSetor = async () => {
-    if (!setorForm.nome.trim()) { toast.error('Nome do setor é obrigatório'); return; }
-    setSavingSetor(true);
-    try {
-      if (editingSetorId) {
-        const { error } = await updateSetor(editingSetorId, { nome: setorForm.nome, descricao: setorForm.descricao });
-        if (error) throw error;
-        toast.success('Setor atualizado!');
-      } else {
-        const { error } = await addSetor({ nome: setorForm.nome, descricao: setorForm.descricao, clinica_id: usuario?.clinica_id });
-        if (error) throw error;
-        toast.success('Setor criado!');
-      }
-      resetSetorForm();
-    } catch { toast.error('Erro ao salvar setor'); }
-    setSavingSetor(false);
+  const handleAddProduto = async () => {
+    if (!novoProduto.trim()) { toast.error('Informe o nome do produto'); return; }
+    setSavingProduto(true);
+    const { error } = await addProduto({ nome: novoProduto.trim(), empresa_id: usuario?.empresa_id, ativo: true });
+    if (error) toast.error('Erro ao adicionar produto');
+    else { toast.success('Produto adicionado!'); setNovoProduto(''); }
+    setSavingProduto(false);
   };
 
-  const handleDeleteSetor = async (id: string) => {
-    if (!window.confirm('Excluir este setor? Pode impactar funis e conversas.')) return;
-    try {
-      const { error } = await deleteSetor(id);
-      if (error) throw error;
-      toast.success('Setor excluído');
-    } catch { toast.error('Erro ao excluir setor'); }
+  const handleUpdateProduto = async (id: string) => {
+    if (!editNomeProduto.trim()) return;
+    const { error } = await updateProduto(id, { nome: editNomeProduto.trim() });
+    if (error) toast.error('Erro ao atualizar produto');
+    else { toast.success('Produto atualizado!'); setEditandoProduto(null); }
   };
 
   // ── Funis handlers ──
@@ -153,7 +140,7 @@ export default function SetoresFunisTab() {
         if (error) throw error;
         toast.success('Funil atualizado!');
       } else {
-        const { error } = await addFunil({ nome: funilForm.nome, descricao: funilForm.descricao, clinica_id: usuario?.clinica_id });
+        const { error } = await addFunil({ nome: funilForm.nome, descricao: funilForm.descricao, empresa_id: usuario?.empresa_id });
         if (error) throw error;
         toast.success('Funil criado!');
       }
@@ -181,76 +168,13 @@ export default function SetoresFunisTab() {
     setSavingOrigem(false);
   };
 
-  const isLoading = loadingSetores || loadingFunis || loadingOrigens;
+  const isLoading = loadingFunis || loadingOrigens;
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
   return (
     <div className="space-y-8">
-      {/* ═══════════════════ SETORES ═══════════════════ */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Network className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Setores</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader><CardTitle className="text-base">{editingSetorId ? 'Editar Setor' : 'Novo Setor'}</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-sm">Nome *</Label>
-                <Input value={setorForm.nome} onChange={e => setSetorForm(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Vendas, Recepção" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm">Descrição</Label>
-                <Input value={setorForm.descricao} onChange={e => setSetorForm(f => ({ ...f, descricao: e.target.value }))} placeholder="Opcional" />
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button onClick={handleSaveSetor} disabled={savingSetor} className="flex-1">
-                  {savingSetor ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : editingSetorId ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                  {editingSetorId ? 'Atualizar' : 'Adicionar'}
-                </Button>
-                {editingSetorId && <Button variant="outline" onClick={resetSetorForm}>Cancelar</Button>}
-              </div>
-            </CardContent>
-          </Card>
-          <div className="md:col-span-2">
-            <Card>
-              <CardContent className="p-4">
-                {setores.length === 0 ? (
-                  <div className="text-center py-6 text-muted-foreground">
-                    <Network className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                    <p className="text-sm">Nenhum setor cadastrado</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {setores.map(setor => (
-                      <div key={setor.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors">
-                        <div>
-                          <h4 className="font-medium text-sm">{setor.nome}</h4>
-                          {setor.descricao && <p className="text-xs text-muted-foreground">{setor.descricao}</p>}
-                        </div>
-                        <div className="flex gap-1.5">
-                          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { setEditingSetorId(setor.id); setSetorForm({ nome: setor.nome, descricao: setor.descricao || '' }); }}>
-                            <Edit2 className="h-3.5 w-3.5 text-blue-500" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleDeleteSetor(setor.id)}>
-                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      <hr className="border-border" />
-
       {/* ═══════════════════ FUNIS DE VENDAS ═══════════════════ */}
       <section>
         <div className="flex items-center gap-2 mb-4">
@@ -390,6 +314,84 @@ export default function SetoresFunisTab() {
                           else toast.success('Origem excluída');
                         }}
                       >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <hr className="border-border" />
+
+      {/* ═══════════════════ PRODUTOS DE INTERESSE ═══════════════════ */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <ShoppingBag className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-semibold">Produtos de Interesse</h3>
+          <span className="text-xs text-muted-foreground ml-2">Usados ao marcar negócios como ganho</span>
+        </div>
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={novoProduto}
+                onChange={e => setNovoProduto(e.target.value)}
+                placeholder="Ex: Implante, Clareamento, Ortodontia"
+                className="flex-1"
+                onKeyDown={e => { if (e.key === 'Enter') handleAddProduto(); }}
+              />
+              <Button onClick={handleAddProduto} disabled={savingProduto}>
+                {savingProduto ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                Adicionar
+              </Button>
+            </div>
+            {produtos.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <ShoppingBag className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                <p className="text-sm">Nenhum produto cadastrado</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {produtos.map(produto => (
+                  <div key={produto.id} className={`flex items-center gap-2 justify-between p-3 border rounded-lg transition-colors ${produto.ativo ? 'hover:bg-accent/5' : 'opacity-50 bg-muted/30'}`}>
+                    {editandoProduto === produto.id ? (
+                      <div className="flex gap-2 flex-1 mr-2">
+                        <Input
+                          value={editNomeProduto}
+                          onChange={e => setEditNomeProduto(e.target.value)}
+                          className="h-7 text-sm flex-1"
+                          autoFocus
+                          onKeyDown={e => { if (e.key === 'Enter') handleUpdateProduto(produto.id); }}
+                        />
+                        <Button size="sm" className="h-7" onClick={() => handleUpdateProduto(produto.id)}>
+                          <Save className="h-3 w-3" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditandoProduto(null)}>X</Button>
+                      </div>
+                    ) : (
+                      <span className="text-sm font-medium flex-1">{produto.nome}</span>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={produto.ativo}
+                        onCheckedChange={(checked) => updateProduto(produto.id, { ativo: checked })}
+                        className="scale-75"
+                      />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                        setEditandoProduto(produto.id);
+                        setEditNomeProduto(produto.nome);
+                      }}>
+                        <Edit2 className="h-3.5 w-3.5 text-blue-500" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={async () => {
+                        if (!window.confirm(`Excluir "${produto.nome}"?`)) return;
+                        const { error } = await deleteProduto(produto.id);
+                        if (error) toast.error('Erro ao excluir'); else toast.success('Produto excluído');
+                      }}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>

@@ -21,11 +21,11 @@ const RouteLogger = () => {
   useEffect(() => {
     logger.info(`Visit Page: ${location.pathname}`, {
       tabela: 'page_view',
-      clinica_id: usuario?.clinica_id,
+      empresa_id: usuario?.empresa_id,
       usuario_id: usuario?.id,
       detalhes: { path: location.pathname, search: location.search }
     });
-  }, [location.pathname, location.search, usuario?.id, usuario?.clinica_id]);
+  }, [location.pathname, location.search, usuario?.id, usuario?.empresa_id]);
 
   return null;
 };

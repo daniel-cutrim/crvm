@@ -76,14 +76,14 @@ export default function VariaveisClinica() {
         {/* Clinica ID */}
         <div className="flex items-end gap-3 p-3 bg-background rounded-md border shadow-sm">
           <div className="flex-1 space-y-1">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">ID da Empresa (clinica_id)</Label>
-            <Input readOnly value={usuario?.clinica_id || ''} className="font-mono text-xs text-muted-foreground bg-muted/50" />
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">ID da Empresa</Label>
+            <Input readOnly value={usuario?.empresa_id || ''} className="font-mono text-xs text-muted-foreground bg-muted/50" />
           </div>
-          <Button 
-            variant="secondary" 
-            size="icon" 
-            onClick={() => copyToClipboard(usuario?.clinica_id, 'ID da Empresa')}
-            title="Copiar clinica_id"
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={() => copyToClipboard(usuario?.empresa_id, 'ID da Empresa')}
+            title="Copiar empresa_id"
           >
             <Copy className="h-4 w-4" />
           </Button>

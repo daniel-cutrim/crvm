@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import {
-  Calendar as CalendarIcon, Users, TrendingUp, DollarSign, Clock, AlertCircle,
-  ClipboardList, CheckCircle2, XCircle, Trophy, Target, ChevronDown,
+  Calendar as CalendarIcon, Users, TrendingUp, Clock, AlertCircle,
+  ClipboardList, CheckCircle2, XCircle, Trophy, Target, ChevronDown, DollarSign,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useConsultas, useLeads, usePlanosTratamento, useReceitas, useDespesas, useTarefas, usePacientes, useFunis } from '@/hooks/useData';
+import { useConsultas, useLeads, usePlanosTratamento, useTarefas, usePacientes, useFunis } from '@/hooks/useData';
+
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { format, parseISO, subMonths, startOfMonth, endOfMonth, startOfQuarter, startOfYear, endOfYear, endOfQuarter, isWithinInterval, isToday, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,8 +30,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { consultas } = useConsultas();
   const { leads } = useLeads();
   const { planos } = usePlanosTratamento();
-  const { receitas } = useReceitas();
-  const { despesas } = useDespesas();
   const { tarefas } = useTarefas();
   const atividades = tarefas;
   const { pacientes } = usePacientes();
@@ -90,15 +89,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     const faltaram = consultasHoje.filter(c => c.status === 'Faltou').length;
     const leadsNovos = leads.filter(l => l.created_at && isInPeriodo(l.created_at)).length;
     const orcAprovados = planos.filter(p => p.status === 'Aprovado').length;
-    const faturamentoPeriodo = receitas
-      .filter(r => isInPeriodo(r.data))
-      .reduce((s, r) => s + Number(r.valor), 0);
-    const recebidoPeriodo = receitas
-      .filter(r => isInPeriodo(r.data) && r.status === 'Pago')
-      .reduce((s, r) => s + Number(r.valor), 0);
-    const despesasPeriodo = despesas
-      .filter(d => isInPeriodo(d.data))
-      .reduce((s, d) => s + Number(d.valor), 0);
     const tarefasAtrasadas = tarefas.filter(
       t => t.status !== 'Concluída' && new Date(t.data_vencimento) < today && !isToday(parseISO(t.data_vencimento))
     ).length;
@@ -112,43 +102,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     const horasOcupadas = consultasPeriodo.reduce((s, c) => s + (c.duracao_minutos || 30) / 60, 0);
     const taxaOcupacao = horasDisponiveis > 0 ? Math.min(Math.round((horasOcupadas / horasDisponiveis) * 100), 100) : 0;
 
-    // ── Ticket Médio ──
-    const receitasPagas = receitas.filter(r => isInPeriodo(r.data) && r.status === 'Pago');
-    const ticketMedio = receitasPagas.length > 0
-      ? receitasPagas.reduce((s, r) => s + Number(r.valor), 0) / receitasPagas.length
-      : 0;
-
-    // ── Taxa de Inadimplência ──
-    const receitasPeriodo = receitas.filter(r => isInPeriodo(r.data));
-    const totalReceitasPeriodo = receitasPeriodo.reduce((s, r) => s + Number(r.valor), 0);
-    const emAbertoPeriodo = receitasPeriodo
-      .filter(r => r.status === 'Em aberto' || r.status === 'Parcial')
-      .reduce((s, r) => s + Number(r.valor), 0);
-    const taxaInadimplencia = totalReceitasPeriodo > 0 ? Math.round((emAbertoPeriodo / totalReceitasPeriodo) * 100) : 0;
-
     return {
       consultasHoje: consultasHoje.length, compareceram, faltaram,
-      leadsNovos, orcAprovados, faturamentoPeriodo, recebidoPeriodo, despesasPeriodo,
-      lucro: faturamentoPeriodo - despesasPeriodo, tarefasAtrasadas, pacientesAtivos,
-      taxaOcupacao, ticketMedio, taxaInadimplencia, emAbertoPeriodo,
+      leadsNovos, orcAprovados, tarefasAtrasadas, pacientesAtivos, taxaOcupacao,
     };
-  }, [consultas, leads, planos, receitas, despesas, tarefas, pacientes, todayStr, isInPeriodo, today, periodoRange]);
-
-  // ── Revenue chart (6 months) ──
-  const revenueChart = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = subMonths(today, 5 - i);
-      const start = startOfMonth(d);
-      const end = endOfMonth(d);
-      const rec = receitas
-        .filter(r => { const rd = parseISO(r.data); return isWithinInterval(rd, { start, end }); })
-        .reduce((s, r) => s + Number(r.valor), 0);
-      const desp = despesas
-        .filter(dp => { const dd = parseISO(dp.data); return isWithinInterval(dd, { start, end }); })
-        .reduce((s, dp) => s + Number(dp.valor), 0);
-      return { mes: format(d, 'MMM', { locale: ptBR }), Receitas: rec, Despesas: desp };
-    });
-  }, [receitas, despesas, today]);
+  }, [consultas, leads, planos, tarefas, pacientes, todayStr, isInPeriodo, today, periodoRange]);
 
   // ── Leads by stage (dynamic from actual data) ──
   const leadsByStage = useMemo(() => {
@@ -175,6 +133,24 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       .filter(s => s.value > 0)
       .sort((a, b) => b.value - a.value);
   }, [leads, isInPeriodo]);
+
+  const valoresChart = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = subMonths(today, 5 - i);
+      const start = startOfMonth(d);
+      const end = endOfMonth(d);
+      const ganhosMes = leads.filter(l => {
+        if (l.resultado !== 'ganho' || !l.resultado_at) return false;
+        const rd = parseISO(l.resultado_at);
+        return isWithinInterval(rd, { start, end });
+      });
+      return {
+        mes: format(d, 'MMM', { locale: ptBR }),
+        'Valor Coletado': ganhosMes.reduce((s, l) => s + Number(l.valor_coletado || 0), 0),
+        'Valor Contrato': ganhosMes.reduce((s, l) => s + Number(l.valor_contrato || 0), 0),
+      };
+    });
+  }, [leads, today]);
 
   // ── CRM: leads filtrados por funil ──
   const leadsFiltrados = useMemo(() => {
@@ -207,6 +183,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       : 0;
     return { negociosAbertos, valorFunil, taxaConversaoCrm, receitaGerada, ticketMedioCrm, tempoParaFechar, ganhos, perdidos, abertos };
   }, [leadsFiltrados]);
+
+  const periodKpis = useMemo(() => {
+    const ganhosNoPeriodo = leadsFiltrados.filter(l =>
+      l.resultado === 'ganho' && l.resultado_at && isInPeriodo(l.resultado_at)
+    );
+    return {
+      ganhosNoPeriodo,
+      totalColetado: ganhosNoPeriodo.reduce((s, l) => s + Number(l.valor_coletado || 0), 0),
+      totalContrato: ganhosNoPeriodo.reduce((s, l) => s + Number(l.valor_contrato || 0), 0),
+    };
+  }, [leadsFiltrados, isInPeriodo]);
 
   // ── CRM: funil chart ──
   const funilChart = useMemo(() => {
@@ -391,8 +378,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { title: 'Agendamentos Hoje', value: kpis.consultasHoje, sub: `${kpis.compareceram} compareceram · ${kpis.faltaram} faltaram`, icon: CalendarIcon, accent: 'bg-sky-50 text-sky-600' },
-          { title: `Faturamento (${periodoLabel})`, value: formatCurrency(kpis.faturamentoPeriodo), sub: `Recebido: ${formatCurrency(kpis.recebidoPeriodo)}`, icon: DollarSign, accent: 'bg-teal-50 text-teal-600' },
-          { title: `Lucro (${periodoLabel})`, value: formatCurrency(kpis.lucro), sub: `Despesas: ${formatCurrency(kpis.despesasPeriodo)}`, icon: TrendingUp, accent: kpis.lucro >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600' },
+          { title: `Valor Coletado (${periodoLabel})`, value: formatCurrency(periodKpis.totalColetado), sub: `${periodKpis.ganhosNoPeriodo.length} negócio(s) ganho(s)`, icon: TrendingUp, accent: 'bg-teal-50 text-teal-600' },
+          { title: `Valor Contrato (${periodoLabel})`, value: formatCurrency(periodKpis.totalContrato), sub: 'Total de contratos fechados', icon: Trophy, accent: 'bg-emerald-50 text-emerald-600' },
         ].map((s, i) => (
           <Card key={i} className="overflow-hidden">
             <CardContent className="p-4">
@@ -578,23 +565,23 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
       </div>
 
-      {/* ── Charts Row ── */}
+      {/* ── Valores Chart ── */}
       <div className="grid grid-cols-1 gap-6">
-        {/* Revenue Chart */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Receitas vs Despesas (6 meses)</CardTitle>
+            <CardTitle className="text-base">Valor Coletado vs Valor Contrato (6 meses)</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={revenueChart} barGap={4}>
+              <BarChart data={valoresChart} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                 <XAxis dataKey="mes" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false}
-                  tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
+                  tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
                 <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid hsl(var(--border))' }} />
-                <Bar dataKey="Receitas" fill="#0d9488" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="Valor Coletado" fill="#0d9488" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Valor Contrato" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

@@ -30,7 +30,7 @@ interface Props {
 
 export default function LeadDetailSheet({ lead, onClose, onEdit, onConvert, onDelete, onUpdateLead, usuario }: Props) {
   const { usuario: authUser } = useAuth();
-  const clinicaNome = authUser?.clinica?.nome || 'MedROI';
+  const clinicaNome = authUser?.empresa?.nome || 'MedROI';
   const { historico, addHistorico } = useLeadHistorico(lead?.id || null);
   const { jornada } = useLeadJornada(lead?.id || null);
   const [tipoContato, setTipoContato] = useState<string>('WhatsApp');

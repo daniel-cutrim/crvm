@@ -53,7 +53,7 @@ function buildReminderMessage(consulta: Consulta, type: '24h' | '1h', clinicaNom
 export default function ReminderNotifications({ consultas, tarefas }: ReminderNotificationsProps) {
   const { usuario } = useAuth();
   const { labelProfissional } = useClinicaConfig();
-  const clinicaNome = usuario?.clinica?.nome || 'MedROI';
+  const clinicaNome = usuario?.empresa?.nome || 'MedROI';
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'consultas' | 'tarefas'>('consultas');

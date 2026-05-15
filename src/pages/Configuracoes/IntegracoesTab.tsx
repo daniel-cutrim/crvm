@@ -70,14 +70,14 @@ export default function IntegracoesTab() {
 
                 const { data: userData } = await supabase
                   .from('usuarios')
-                  .select('clinica_id')
+                  .select('empresa_id')
                   .eq('auth_user_id', session.user.id)
                   .single();
 
                 if (!userData) throw new Error("Usuário não encontrado");
 
                 const { data, error } = await supabase.functions.invoke('google-calendar-auth', {
-                  body: { user_id: session.user.id, clinica_id: userData.clinica_id }
+                  body: { user_id: session.user.id, empresa_id: userData.empresa_id }
                 });
 
                 if (error || data?.error) throw error || new Error(data?.error);

@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
@@ -33,6 +33,9 @@ interface SupervisorConfig {
 }
 
 export default function SupervisoraTab() {
+  const { usuario } = useAuth();
+  const empresaId = usuario?.empresa_id ?? null;
+
   const [config, setConfig] = useState<SupervisorConfig>({
     system_prompt: DEFAULT_PROMPT,
     sales_script: '',
@@ -40,16 +43,11 @@ export default function SupervisoraTab() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [clinicaId, setClinicaId] = useState<string | null>(null);
 
   const fetchConfig = useCallback(async () => {
+    if (!empresaId) return;
     try {
-      // Get clinica_id from current user
-      const { data: userData } = await supabase.rpc('get_user_clinica_id');
-      if (!userData) return;
-      setClinicaId(userData);
-
-      const res = await fetch(`${SERVER_URL}/api/supervisor-config/${userData}`, {
+      const res = await fetch(`${SERVER_URL}/api/supervisor-config/${empresaId}`, {
         headers: getHeaders(),
       });
 
@@ -66,18 +64,18 @@ export default function SupervisoraTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [empresaId]);
 
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
 
   const handleSave = async () => {
-    if (!clinicaId) return;
+    if (!empresaId) return;
     setSaving(true);
 
     try {
-      const res = await fetch(`${SERVER_URL}/api/supervisor-config/${clinicaId}`, {
+      const res = await fetch(`${SERVER_URL}/api/supervisor-config/${empresaId}`, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify(config),

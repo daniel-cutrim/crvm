@@ -1,3 +1,17 @@
+export interface Permissoes {
+  ver_dashboard?: boolean;
+  ver_funil?: boolean;
+  editar_negocios?: boolean;
+  fechar_negocios?: boolean;
+  ver_pessoas?: boolean;
+  editar_pessoas?: boolean;
+  ver_marketing?: boolean;
+  editar_marketing?: boolean;
+  acessar_chat?: boolean;
+  ver_agenda?: boolean;
+  gerenciar_usuarios?: boolean;
+}
+
 export interface Usuario {
   id: string;
   auth_user_id?: string;
@@ -7,11 +21,12 @@ export interface Usuario {
   especialidade?: string | null;
   ativo: boolean;
   created_at: string;
+  permissoes?: Permissoes | null;
 }
 
 export interface Pessoa {
   id: string;
-  clinica_id?: string | null;
+  empresa_id?: string | null;
   nome: string;
   email: string | null;
   telefone: string | null;
@@ -26,7 +41,7 @@ export interface Pessoa {
 
 export interface Integracao {
   id: string;
-  clinica_id: string;
+  empresa_id: string;
   setor_id?: string | null;
   tipo: string;
   credentials: Record<string, unknown>;
@@ -93,7 +108,7 @@ export interface Lead {
   utm_campaign: string | null;
   utm_term: string | null;
   utm_content: string | null;
-  clinica_id?: string | null;
+  empresa_id?: string | null;
   setor_id?: string | null;
   funil_id?: string | null;
   etapa_id?: string | null;
@@ -106,9 +121,20 @@ export interface Lead {
   valor?: number | null;
   tags?: string[] | null;
   etapa_entrou_at?: string | null;
+  valor_coletado?: number | null;
+  valor_contrato?: number | null;
+  produtos_interesse?: string[] | null;
   // joins
   pessoa?: Pessoa;
   proprietario?: Usuario;
+}
+
+export interface Produto {
+  id: string;
+  empresa_id: string;
+  nome: string;
+  ativo: boolean;
+  created_at: string;
 }
 
 export interface LeadHistorico {
@@ -124,7 +150,7 @@ export interface LeadHistorico {
 export interface LeadJornada {
   id: string;
   lead_id: string;
-  clinica_id: string;
+  empresa_id: string;
   plataforma: 'Meta' | 'Google' | 'WhatsApp' | 'Orgânico';
   utm_source: string | null;
   utm_medium: string | null;
@@ -173,38 +199,6 @@ export interface ProcedimentoPadrao {
   created_at: string;
 }
 
-export interface Receita {
-  id: string;
-  paciente_id: string;
-  plano_id: string | null;
-  procedimento: string | null;
-  data: string;
-  forma_pagamento: 'Dinheiro' | 'Cartão de Crédito' | 'Cartão de Débito' | 'PIX' | 'Boleto' | 'Convênio';
-  valor: number;
-  status: 'Pago' | 'Parcial' | 'Em aberto';
-  created_at: string;
-  paciente?: Paciente;
-}
-
-export interface Despesa {
-  id: string;
-  data: string;
-  categoria: 'Aluguel' | 'Materiais' | 'Equipe' | 'Marketing' | 'Manutenção' | 'Outros';
-  descricao: string;
-  valor: number;
-  created_at: string;
-}
-
-export interface DespesaRecorrente {
-  id: string;
-  descricao: string;
-  categoria: 'Aluguel' | 'Materiais' | 'Equipe' | 'Marketing' | 'Manutenção' | 'Outros';
-  valor: number;
-  dia_vencimento: number;
-  ativo: boolean;
-  created_at: string;
-}
-
 export interface Tarefa {
   id: string;
   descricao: string;
@@ -222,7 +216,7 @@ export interface Tarefa {
   pessoa?: Pessoa;
 }
 
-export interface Clinica {
+export interface Empresa {
   id: string;
   nome: string;
   cnpj: string | null;
@@ -272,7 +266,7 @@ export interface ProntuarioEntrada {
 
 export interface Setor {
   id: string;
-  clinica_id: string;
+  empresa_id: string;
   nome: string;
   descricao: string | null;
   criado_em: string;
@@ -281,7 +275,7 @@ export interface Setor {
 
 export interface Funil {
   id: string;
-  clinica_id: string;
+  empresa_id: string;
   nome: string;
   descricao: string | null;
   criado_em: string;
@@ -299,7 +293,7 @@ export interface FunilEtapa {
 
 export interface LeadOrigem {
   id: string;
-  clinica_id: string;
+  empresa_id: string;
   nome: string;
   ativo: boolean;
   ordem: number;
@@ -308,7 +302,7 @@ export interface LeadOrigem {
 
 export interface CampoCategoria {
   id: string;
-  clinica_id?: string | null;
+  empresa_id?: string | null;
   nome: string;
   funis_ids: string[];
   ordem: number;
