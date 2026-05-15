@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { maskPhone } from '@/utils/masks';
 import type { FunilEtapa, Pessoa, Usuario } from '@/types';
-
-const ORIGENS = ['Instagram', 'Google Ads', 'Facebook', 'Site', 'Indicação', 'WhatsApp', 'Outro'];
+import { useLeadOrigens } from '@/hooks/useLeadOrigens';
 
 interface Props {
   open: boolean;
@@ -20,6 +19,7 @@ interface Props {
 }
 
 export default function NegocioFormDialog({ open, onClose, onSave, etapas, pessoas, usuarios, funilId, onAddPessoa }: Props) {
+  const { origensAtivas } = useLeadOrigens();
   const [nome, setNome] = useState('');
   const [pessoaId, setPessoaId] = useState('');
   const [proprietarioId, setProprietarioId] = useState('');
@@ -316,7 +316,7 @@ export default function NegocioFormDialog({ open, onClose, onSave, etapas, pesso
               onChange={e => setOrigem(e.target.value)}
             >
               <option value="">Selecionar...</option>
-              {ORIGENS.map(o => <option key={o} value={o}>{o}</option>)}
+              {origensAtivas.map(o => <option key={o.id} value={o.nome}>{o.nome}</option>)}
             </select>
           </div>
 

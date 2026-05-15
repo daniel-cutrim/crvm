@@ -159,12 +159,24 @@ export default function SetoresFunisTab() {
   };
 
   // ── Origens handlers ──
+  const ORIGENS_PADRAO = ['Whatsapp Direto', 'Indicação', 'Tráfego Meta', 'Tráfego Google', 'Instagram', 'Facebook', 'Google'];
+
   const handleAddOrigem = async () => {
     if (!novaOrigem.trim()) { toast.error('Informe o nome da origem'); return; }
     setSavingOrigem(true);
     const { error } = await addOrigem(novaOrigem.trim());
     if (error) toast.error('Erro ao adicionar origem');
     else { toast.success('Origem adicionada!'); setNovaOrigem(''); }
+    setSavingOrigem(false);
+  };
+
+  const handleRestaurarOrigens = async () => {
+    const existentes = origens.map(o => o.nome.toLowerCase());
+    const faltando = ORIGENS_PADRAO.filter(o => !existentes.includes(o.toLowerCase()));
+    if (faltando.length === 0) { toast.info('Todas as origens padrão já existem'); return; }
+    setSavingOrigem(true);
+    for (const nome of faltando) await addOrigem(nome);
+    toast.success(`${faltando.length} origem(ns) padrão adicionada(s)`);
     setSavingOrigem(false);
   };
 
@@ -257,6 +269,9 @@ export default function SetoresFunisTab() {
           <Globe2 className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-semibold">Origens de Lead</h3>
           <span className="text-xs text-muted-foreground ml-2">Gerencie de onde seus leads chegam</span>
+          <Button variant="outline" size="sm" className="ml-auto text-xs h-7" onClick={handleRestaurarOrigens} disabled={savingOrigem}>
+            Restaurar padrão
+          </Button>
         </div>
         <Card>
           <CardContent className="p-4 space-y-4">

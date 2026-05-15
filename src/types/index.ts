@@ -201,6 +201,7 @@ export interface ProcedimentoPadrao {
 
 export interface Tarefa {
   id: string;
+  nome?: string | null;
   descricao: string;
   paciente_id: string | null;
   lead_id: string | null;

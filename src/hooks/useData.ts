@@ -285,6 +285,40 @@ export function useTarefas() {
   return { tarefas: h.data, loading: h.loading, fetchTarefas: h.fetch, addTarefa: h.add, updateTarefa: h.update, deleteTarefa: h.remove };
 }
 
+export function useTarefasByLead(leadId: string | null) {
+  const [tarefas, setTarefas] = useState<Tarefa[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchTarefas = useCallback(async () => {
+    if (!leadId) return;
+    setLoading(true);
+    const { data } = await supabase.from('tarefas')
+      .select('*, responsavel:usuarios!responsavel_id(*)')
+      .eq('lead_id', leadId)
+      .order('data_vencimento', { ascending: true });
+    setTarefas((data as unknown as Tarefa[] | null) || []);
+    setLoading(false);
+  }, [leadId]);
+
+  useEffect(() => { fetchTarefas(); }, [fetchTarefas]);
+
+  const addTarefa = async (item: Record<string, unknown>) => {
+    const { data, error } = await (supabase.from('tarefas') as any)
+      .insert(item).select('*, responsavel:usuarios!responsavel_id(*)').single();
+    if (!error && data) setTarefas(prev => [...prev, data as unknown as Tarefa]);
+    return { data: data as unknown as Tarefa | null, error };
+  };
+
+  const updateTarefa = async (id: string, updates: Record<string, unknown>) => {
+    const { data, error } = await (supabase.from('tarefas') as any)
+      .update(updates).eq('id', id).select('*, responsavel:usuarios!responsavel_id(*)').single();
+    if (!error && data) setTarefas(prev => prev.map(t => t.id === id ? data as unknown as Tarefa : t));
+    return { data: data as unknown as Tarefa | null, error };
+  };
+
+  return { tarefas, loading, fetchTarefas, addTarefa, updateTarefa };
+}
+
 export function useUsuarios() {
   const h = useSupabaseTable<Usuario>('usuarios', '*', 'nome', true);
   return { usuarios: h.data, loading: h.loading, fetchUsuarios: h.fetch, addUsuario: h.add, updateUsuario: h.update, deleteUsuario: h.remove };

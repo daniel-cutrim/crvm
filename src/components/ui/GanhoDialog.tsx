@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { Loader2, Plus } from 'lucide-react';
 import type { Produto } from '@/types';
 
@@ -21,16 +22,16 @@ interface Props {
 }
 
 export default function GanhoDialog({ open, onClose, onConfirm, produtos, onAddProduto }: Props) {
-  const [valorColetado, setValorColetado] = useState('');
-  const [valorContrato, setValorContrato] = useState('');
+  const [valorColetadoCents, setValorColetadoCents] = useState(0);
+  const [valorContratoCents, setValorContratoCents] = useState(0);
   const [produtosSelecionados, setProdutosSelecionados] = useState<string[]>([]);
   const [novoProduto, setNovoProduto] = useState('');
   const [addingProduto, setAddingProduto] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const resetAndClose = () => {
-    setValorColetado('');
-    setValorContrato('');
+    setValorColetadoCents(0);
+    setValorContratoCents(0);
     setProdutosSelecionados([]);
     setNovoProduto('');
     onClose();
@@ -58,16 +59,16 @@ export default function GanhoDialog({ open, onClose, onConfirm, produtos, onAddP
   };
 
   const canConfirm =
-    parseFloat(valorColetado) > 0 &&
-    parseFloat(valorContrato) > 0 &&
+    valorColetadoCents > 0 &&
+    valorContratoCents > 0 &&
     produtosSelecionados.length > 0;
 
   const handleConfirm = async () => {
     if (!canConfirm) return;
     setSaving(true);
     await onConfirm({
-      valor_coletado: parseFloat(valorColetado),
-      valor_contrato: parseFloat(valorContrato),
+      valor_coletado: valorColetadoCents / 100,
+      valor_contrato: valorContratoCents / 100,
       produtos_interesse: produtosSelecionados,
     });
     setSaving(false);
@@ -90,30 +91,24 @@ export default function GanhoDialog({ open, onClose, onConfirm, produtos, onAddP
 
           <div className="space-y-1.5">
             <Label>
-              Valor Coletado (R$) <span className="text-destructive">*</span>
+              Valor Coletado <span className="text-destructive">*</span>
             </Label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0,00"
-              value={valorColetado}
-              onChange={e => setValorColetado(e.target.value)}
+            <CurrencyInput
+              cents={valorColetadoCents}
+              onCentsChange={setValorColetadoCents}
+              className="w-full"
             />
             <p className="text-[11px] text-muted-foreground">Valor efetivamente pago/coletado</p>
           </div>
 
           <div className="space-y-1.5">
             <Label>
-              Valor do Contrato (R$) <span className="text-destructive">*</span>
+              Valor do Contrato <span className="text-destructive">*</span>
             </Label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0,00"
-              value={valorContrato}
-              onChange={e => setValorContrato(e.target.value)}
+            <CurrencyInput
+              cents={valorContratoCents}
+              onCentsChange={setValorContratoCents}
+              className="w-full"
             />
             <p className="text-[11px] text-muted-foreground">Valor total acordado no contrato</p>
           </div>

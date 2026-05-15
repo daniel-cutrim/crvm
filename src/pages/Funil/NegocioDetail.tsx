@@ -10,9 +10,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   useLeadHistorico, useLeadEtapaHistorico, useCamposCategorias, useCamposValores,
-  useUsuarios, useProdutos,
+  useUsuarios, useProdutos, useTarefasByLead,
 } from '@/hooks/useData';
 import GanhoDialog from '@/components/ui/GanhoDialog';
+import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { useAuth } from '@/contexts/AuthContext';
 import { confirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,17 @@ function tagColor(tag: string) {
   return TAG_COLORS[Math.abs(h) % TAG_COLORS.length];
 }
 
+const MOTIVOS_PERDA = [
+  'Sem tempo', 'Achou caro', 'Está sem dinheiro', 'Descrença em si',
+  'Descrença no método', 'Adiou', 'Vai se planejar',
+  'Escolheu concorrente', 'Não respondeu', 'Fora do perfil',
+  'Desistiu do tratamento', 'Outro',
+] as const;
+
+const TIPOS_TAREFA = {
+  follow_up: 'Follow-up', ligacao: 'Ligação', reuniao: 'Reunião', email: 'E-mail', outros: 'Outros',
+} as const;
+
 const TIPOS_CONTATO = ['Ligação', 'WhatsApp', 'E-mail', 'Visita', 'Outro'] as const;
 
 interface Props {
@@ -62,19 +74,23 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
   const [showGanhoDialog, setShowGanhoDialog] = useState(false);
 
   const { historico, addHistorico } = useLeadHistorico(lead?.id || null);
+  const { tarefas: leadTarefas, addTarefa: addLeadTarefa, updateTarefa: updateLeadTarefa } = useTarefasByLead(lead?.id || null);
   const { historico: etapaHistorico } = useLeadEtapaHistorico(lead?.id || null);
   const { categorias } = useCamposCategorias();
   const { valores, upsertValor } = useCamposValores(lead?.id || null);
 
   const [editingNome, setEditingNome] = useState(false);
   const [nomeEdit, setNomeEdit] = useState('');
-  const [motivoPerda, setMotivoPerda] = useState('');
+  const [motivoSelecionado, setMotivoSelecionado] = useState('');
+  const [motivoOutro, setMotivoOutro] = useState('');
   const [showMotivoModal, setShowMotivoModal] = useState(false);
   const [tipoContato, setTipoContato] = useState<string>('WhatsApp');
   const [descricaoHistorico, setDescricaoHistorico] = useState('');
   const [sendingHistorico, setSendingHistorico] = useState(false);
-  const [valorEdit, setValorEdit] = useState('');
+  const [valorEditCents, setValorEditCents] = useState(0);
   const [editingValor, setEditingValor] = useState(false);
+  const [tarefaForm, setTarefaForm] = useState({ nome: '', tipo: '', descricao: '', responsavel_id: '', data_vencimento: '', status: 'Pendente' });
+  const [savingTarefa, setSavingTarefa] = useState(false);
   const [activeTab, setActiveTab] = useState('foco');
 
   // Inline campo editing
@@ -88,7 +104,7 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
   useEffect(() => {
     if (lead) {
       setNomeEdit(lead.nome);
-      setValorEdit(lead.valor?.toString() || '');
+      setValorEditCents(Math.round((lead.valor || 0) * 100));
     }
   }, [lead]);
 
@@ -106,11 +122,10 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
 
   const handleSaveValor = useCallback(async () => {
     if (!lead) return;
-    const v = parseFloat(valorEdit) || 0;
-    await onUpdateLead(lead.id, { valor: v });
+    await onUpdateLead(lead.id, { valor: valorEditCents / 100 });
     setEditingValor(false);
     toast.success('Valor atualizado');
-  }, [lead, valorEdit, onUpdateLead]);
+  }, [lead, valorEditCents, onUpdateLead]);
 
   const handleGanho = useCallback(() => {
     if (!lead) return;
@@ -144,15 +159,17 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
 
   const confirmPerdido = useCallback(async () => {
     if (!lead) return;
+    const motivo = motivoSelecionado === 'Outro' ? motivoOutro : motivoSelecionado;
     await onUpdateLead(lead.id, {
       resultado: 'perdido',
-      motivo_perda: motivoPerda || null,
+      motivo_perda: motivo || null,
       resultado_at: new Date().toISOString(),
     });
     setShowMotivoModal(false);
-    setMotivoPerda('');
+    setMotivoSelecionado('');
+    setMotivoOutro('');
     toast.success('Negócio marcado como perdido.');
-  }, [lead, motivoPerda, onUpdateLead]);
+  }, [lead, motivoSelecionado, motivoOutro, onUpdateLead]);
 
   const handleDelete = useCallback(async () => {
     if (!lead) return;
@@ -178,6 +195,23 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
     setDescricaoHistorico('');
     setSendingHistorico(false);
   }, [lead, descricaoHistorico, tipoContato, usuario, addHistorico]);
+
+  const handleAddTarefa = useCallback(async () => {
+    if (!lead || !tarefaForm.descricao.trim() || !tarefaForm.data_vencimento) return;
+    setSavingTarefa(true);
+    await addLeadTarefa({
+      nome: tarefaForm.nome.trim() || null,
+      tipo: tarefaForm.tipo || null,
+      descricao: tarefaForm.descricao.trim(),
+      responsavel_id: tarefaForm.responsavel_id || null,
+      data_vencimento: tarefaForm.data_vencimento,
+      status: tarefaForm.status,
+      lead_id: lead.id,
+    });
+    setTarefaForm({ nome: '', tipo: '', descricao: '', responsavel_id: '', data_vencimento: '', status: 'Pendente' });
+    setSavingTarefa(false);
+    toast.success('Atividade criada');
+  }, [lead, tarefaForm, addLeadTarefa]);
 
   const handleCampoValor = useCallback(async (campoId: string, valor: string) => {
     if (!lead) return;
@@ -363,16 +397,13 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-0.5">Valor</p>
                     {editingValor ? (
-                      <input
+                      <CurrencyInput
                         autoFocus
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="dental-input w-full text-sm"
-                        value={valorEdit}
-                        onChange={e => setValorEdit(e.target.value)}
+                        cents={valorEditCents}
+                        onCentsChange={setValorEditCents}
                         onBlur={handleSaveValor}
                         onKeyDown={e => { if (e.key === 'Enter') handleSaveValor(); if (e.key === 'Escape') setEditingValor(false); }}
+                        className="w-full"
                       />
                     ) : (
                       <button
@@ -641,19 +672,32 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
                   </div>
 
                   <div className="mt-4 space-y-2">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Recentes</p>
-                    {historico.slice(0, 3).map(h => (
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Atividades recentes</p>
+                    {leadTarefas.slice(0, 3).map(t => (
+                      <div key={t.id} className="p-2 rounded-lg border border-border bg-card text-xs">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <span className="font-medium text-foreground truncate">{t.nome || t.descricao}</span>
+                          <button
+                            onClick={() => updateLeadTarefa(t.id, { status: t.status === 'Concluída' ? 'Pendente' : 'Concluída' })}
+                            className={cn('shrink-0 w-4 h-4 rounded border flex items-center justify-center', t.status === 'Concluída' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-border hover:border-primary')}
+                          >
+                            {t.status === 'Concluída' && <Check size={10} />}
+                          </button>
+                        </div>
+                        {t.nome && <p className="text-muted-foreground truncate">{t.descricao}</p>}
+                        <p className="text-muted-foreground">{format(parseISO(t.data_vencimento), 'dd/MM/yy', { locale: ptBR })}{t.responsavel && ` · ${t.responsavel.nome}`}</p>
+                      </div>
+                    ))}
+                    {leadTarefas.length === 0 && historico.slice(0, 2).map(h => (
                       <div key={h.id} className="p-2 rounded-lg border border-border bg-card text-xs">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="font-medium text-foreground">{h.tipo_contato}</span>
-                          <span className="text-muted-foreground">
-                            {format(parseISO(h.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-                          </span>
+                          <span className="text-muted-foreground">{format(parseISO(h.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}</span>
                         </div>
                         <p className="text-foreground leading-relaxed">{h.descricao}</p>
                       </div>
                     ))}
-                    {historico.length === 0 && (
+                    {leadTarefas.length === 0 && historico.length === 0 && (
                       <p className="text-xs text-muted-foreground italic">Nenhuma atividade registrada</p>
                     )}
                   </div>
@@ -680,54 +724,104 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
                   <p className="text-xs font-medium text-foreground mb-3">Nova Atividade</p>
                   <div className="space-y-3">
                     <div>
+                      <p className="text-[10px] text-muted-foreground mb-1">Nome</p>
+                      <input className="dental-input w-full text-sm" placeholder="Ex: Ligar para o cliente..." value={tarefaForm.nome} onChange={e => setTarefaForm(f => ({ ...f, nome: e.target.value }))} />
+                    </div>
+                    <div>
                       <p className="text-[10px] text-muted-foreground mb-1">Tipo</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {TIPOS_CONTATO.map(t => (
-                          <button
-                            key={t}
-                            onClick={() => setTipoContato(t)}
-                            className={cn(
-                              'px-2.5 py-1 rounded text-xs font-medium transition-colors',
-                              tipoContato === t ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80',
-                            )}
-                          >
-                            {t}
+                        {(Object.entries(TIPOS_TAREFA) as [string, string][]).map(([key, label]) => (
+                          <button key={key} onClick={() => setTarefaForm(f => ({ ...f, tipo: f.tipo === key ? '' : key }))}
+                            className={cn('px-2.5 py-1 rounded text-xs font-medium transition-colors', tarefaForm.tipo === key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80')}>
+                            {label}
                           </button>
                         ))}
                       </div>
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground mb-1">Descrição</p>
-                      <textarea
-                        className="dental-input w-full h-20 resize-none text-sm"
-                        placeholder="Descreva a atividade..."
-                        value={descricaoHistorico}
-                        onChange={e => setDescricaoHistorico(e.target.value)}
-                      />
+                      <textarea className="dental-input w-full h-16 resize-none text-sm" placeholder="Detalhes..." value={tarefaForm.descricao} onChange={e => setTarefaForm(f => ({ ...f, descricao: e.target.value }))} />
                     </div>
-                    <Button
-                      size="sm"
-                      disabled={!descricaoHistorico.trim() || sendingHistorico}
-                      onClick={handleAddHistorico}
-                    >
-                      {sendingHistorico ? 'Salvando...' : 'Registrar atividade'}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">Responsável</p>
+                        <select className="dental-input w-full text-sm" value={tarefaForm.responsavel_id} onChange={e => setTarefaForm(f => ({ ...f, responsavel_id: e.target.value }))}>
+                          <option value="">Nenhum</option>
+                          {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">Prazo</p>
+                        <input type="date" className="dental-input w-full text-sm" value={tarefaForm.data_vencimento} onChange={e => setTarefaForm(f => ({ ...f, data_vencimento: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1">Status</p>
+                      <div className="flex gap-1.5">
+                        {(['Pendente', 'Em andamento'] as const).map(s => (
+                          <button key={s} onClick={() => setTarefaForm(f => ({ ...f, status: s }))}
+                            className={cn('px-2.5 py-1 rounded text-xs font-medium transition-colors', tarefaForm.status === s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80')}>
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <Button size="sm" disabled={!tarefaForm.descricao.trim() || !tarefaForm.data_vencimento || savingTarefa} onClick={handleAddTarefa} className="w-full">
+                      {savingTarefa ? 'Salvando...' : 'Criar atividade'}
                     </Button>
                   </div>
+                  {leadTarefas.length > 0 && (
+                    <div className="mt-5 space-y-2">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Atividades criadas</p>
+                      {leadTarefas.map(t => (
+                        <div key={t.id} className="p-2.5 rounded-lg border border-border bg-card text-xs">
+                          <div className="flex items-start gap-2">
+                            <button onClick={() => updateLeadTarefa(t.id, { status: t.status === 'Concluída' ? 'Pendente' : 'Concluída' })}
+                              className={cn('mt-0.5 shrink-0 w-4 h-4 rounded border flex items-center justify-center', t.status === 'Concluída' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-border hover:border-primary')}>
+                              {t.status === 'Concluída' && <Check size={10} />}
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <p className={cn('font-medium text-foreground truncate', t.status === 'Concluída' && 'line-through opacity-60')}>{t.nome || t.descricao}</p>
+                              {t.nome && <p className="text-muted-foreground truncate">{t.descricao}</p>}
+                              <p className="text-muted-foreground mt-0.5">{t.tipo && `${TIPOS_TAREFA[t.tipo as keyof typeof TIPOS_TAREFA]} · `}{format(parseISO(t.data_vencimento), 'dd/MM/yy', { locale: ptBR })}{t.responsavel && ` · ${t.responsavel.nome}`}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </TabsContent>
 
                 {/* Registro */}
                 <TabsContent value="registro" className="flex-1 overflow-y-auto p-4 m-0 space-y-2">
-                  {historico.length === 0 && (
+                  {historico.length === 0 && leadTarefas.length === 0 && (
                     <p className="text-xs text-muted-foreground italic text-center py-8">Nenhum registro</p>
                   )}
+                  {leadTarefas.map(t => (
+                    <div key={`t-${t.id}`} className="relative pl-4 border-l-2 border-blue-200">
+                      <div className="absolute left-[-5px] top-1.5 w-2 h-2 rounded-full bg-blue-500" />
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="dental-badge text-[10px] bg-blue-50 text-blue-700 border-blue-200">Atividade</span>
+                          {t.tipo && <span className="text-[10px] text-muted-foreground">{TIPOS_TAREFA[t.tipo as keyof typeof TIPOS_TAREFA]}</span>}
+                          <span className="text-[10px] text-muted-foreground">prazo {format(parseISO(t.data_vencimento), 'dd/MM/yy', { locale: ptBR })}</span>
+                        </div>
+                        <button onClick={() => updateLeadTarefa(t.id, { status: t.status === 'Concluída' ? 'Pendente' : 'Concluída' })}
+                          className={cn('shrink-0 w-4 h-4 rounded border flex items-center justify-center', t.status === 'Concluída' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-border hover:border-primary')}>
+                          {t.status === 'Concluída' && <Check size={10} />}
+                        </button>
+                      </div>
+                      <p className={cn('text-xs text-foreground', t.status === 'Concluída' && 'line-through opacity-60')}>{t.nome || t.descricao}</p>
+                      {t.nome && <p className="text-xs text-muted-foreground">{t.descricao}</p>}
+                      {t.responsavel && <p className="text-[10px] text-muted-foreground mt-0.5">responsável: {t.responsavel.nome}</p>}
+                    </div>
+                  ))}
                   {historico.map(h => (
-                    <div key={h.id} className="relative pl-4 border-l-2 border-border">
+                    <div key={`h-${h.id}`} className="relative pl-4 border-l-2 border-border">
                       <div className="absolute left-[-5px] top-1.5 w-2 h-2 rounded-full bg-primary" />
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="dental-badge dental-badge-default text-[10px]">{h.tipo_contato}</span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {format(parseISO(h.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-                        </span>
+                        <span className="text-[10px] text-muted-foreground">{format(parseISO(h.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}</span>
                       </div>
                       <p className="text-xs text-foreground leading-relaxed">{h.descricao}</p>
                       {h.usuario && <p className="text-[10px] text-muted-foreground mt-0.5">por {h.usuario.nome}</p>}
@@ -762,16 +856,22 @@ export default function NegocioDetail({ lead, etapas, funilNome, allTags, onClos
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowMotivoModal(false)} />
           <div className="relative bg-card rounded-xl shadow-2xl border border-border p-5 w-full max-w-sm">
-            <h3 className="text-base font-semibold text-foreground mb-3">Motivo da perda</h3>
-            <textarea
-              className="dental-input w-full h-20 resize-none text-sm mb-3"
-              placeholder="Descreva o motivo (opcional)..."
-              value={motivoPerda}
-              onChange={e => setMotivoPerda(e.target.value)}
-              autoFocus
-            />
+            <h3 className="text-base font-semibold text-foreground mb-1">Motivo da perda</h3>
+            <p className="text-xs text-muted-foreground mb-3">Selecione o principal motivo</p>
+            <div className="grid grid-cols-2 gap-1.5 mb-3">
+              {MOTIVOS_PERDA.map(m => (
+                <button key={m} onClick={() => setMotivoSelecionado(prev => prev === m ? '' : m)}
+                  className={cn('px-2.5 py-2 rounded-lg text-xs font-medium text-left transition-colors border',
+                    motivoSelecionado === m ? 'bg-red-50 border-red-400 text-red-700' : 'bg-muted/50 border-border text-foreground hover:border-red-300')}>
+                  {m}
+                </button>
+              ))}
+            </div>
+            {motivoSelecionado === 'Outro' && (
+              <textarea autoFocus className="dental-input w-full h-16 resize-none text-sm mb-3" placeholder="Descreva o motivo..." value={motivoOutro} onChange={e => setMotivoOutro(e.target.value)} />
+            )}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowMotivoModal(false)}>Cancelar</Button>
+              <Button variant="outline" size="sm" onClick={() => { setShowMotivoModal(false); setMotivoSelecionado(''); setMotivoOutro(''); }}>Cancelar</Button>
               <Button size="sm" variant="destructive" onClick={confirmPerdido}>Confirmar</Button>
             </div>
           </div>
