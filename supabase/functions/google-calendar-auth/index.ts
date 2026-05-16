@@ -31,12 +31,12 @@ serve(async (req) => {
   try {
     // 1. Generate Auth URL (Frontend calls this)
     if (req.method === "POST") {
-      const { user_id, clinica_id } = await req.json();
-      
-      if (!user_id || !clinica_id) throw new Error("Missing user_id or clinica_id");
+      const { user_id, empresa_id } = await req.json();
 
-      // Pass user_id and clinica_id in the state so we know who authorized it upon redirect
-      const state = btoa(JSON.stringify({ user_id, clinica_id }));
+      if (!user_id || !empresa_id) throw new Error("Missing user_id or empresa_id");
+
+      // Pass user_id and empresa_id in the state so we know who authorized it upon redirect
+      const state = btoa(JSON.stringify({ user_id, empresa_id }));
 
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${clientId}` +
@@ -68,7 +68,7 @@ serve(async (req) => {
         return new Response("Missing code or state in callback", { status: 400 });
       }
 
-      const { user_id, clinica_id } = JSON.parse(atob(state));
+      const { user_id, empresa_id } = JSON.parse(atob(state));
 
       // Exchange code for tokens
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -94,7 +94,7 @@ serve(async (req) => {
         .from('auth_google_agenda')
         .upsert({
           user_id: user_id,
-          clinica_id: clinica_id,
+          empresa_id: empresa_id,
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token, // Might be undefined if not first time. Handle appropriately.
           expiry_date: new Date(Date.now() + tokens.expires_in * 1000).toISOString()

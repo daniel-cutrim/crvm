@@ -1,47 +1,79 @@
 import { Router, type Request, type Response } from 'express';
-import { config } from '../config.js';
+import { supabase } from '../supabase.js';
 import QRCode from 'qrcode';
 
 const router = Router();
 
-const ZAPI_BASE = `https://api.z-api.io/instances/${config.zapiInstanceId}/token/${config.zapiToken}`;
+interface ZapiCredentials {
+  instanceId: string;
+  token: string;
+  clientToken: string;
+}
 
-const zapiHeaders = {
-  'Client-Token': config.zapiClientToken,
-  'Content-Type': 'application/json',
-};
+async function getZapiCredentials(empresaId: string): Promise<ZapiCredentials | null> {
+  const { data, error } = await supabase
+    .from('integracoes')
+    .select('credentials')
+    .eq('empresa_id', empresaId)
+    .eq('tipo', 'zapi')
+    .eq('ativo', true)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  const creds = data.credentials as Partial<ZapiCredentials>;
+  if (!creds.instanceId || !creds.token) return null;
+  return creds as ZapiCredentials;
+}
+
+function zapiBase(creds: ZapiCredentials) {
+  return `https://api.z-api.io/instances/${creds.instanceId}/token/${creds.token}`;
+}
+
+function zapiHeaders(creds: ZapiCredentials) {
+  return {
+    'Client-Token': creds.clientToken || '',
+    'Content-Type': 'application/json',
+  };
+}
 
 /**
- * GET /api/whatsapp/status
- * Returns the current Z-API instance connection status.
- * Z-API may return { connected: boolean } or { value: "CONNECTED"|"DISCONNECTED" }
+ * GET /api/whatsapp/status?empresa_id=UUID
  */
-router.get('/status', async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const r = await fetch(`${ZAPI_BASE}/status`, { headers: zapiHeaders });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await r.json() as Record<string, any>;
+router.get('/status', async (req: Request, res: Response): Promise<void> => {
+  const empresaId = req.query.empresa_id as string;
+  if (!empresaId) {
+    res.status(400).json({ error: 'empresa_id é obrigatório' });
+    return;
+  }
 
-    // Log raw Z-API response to help debug status detection
+  const creds = await getZapiCredentials(empresaId);
+  if (!creds) {
+    res.status(404).json({ error: 'Integração Z-API não configurada para esta empresa', connected: false, state: 'unknown' });
+    return;
+  }
+
+  try {
+    const r = await fetch(`${zapiBase(creds)}/status`, { headers: zapiHeaders(creds) });
+    const data = await r.json() as Record<string, unknown>;
+
     console.log('[whatsapp] status raw:', JSON.stringify(data));
 
-    // Handle multiple possible Z-API response formats
     let connected = false;
     if (typeof data.connected === 'boolean') {
       connected = data.connected;
     } else if (typeof data.connected === 'string') {
       connected = data.connected.toLowerCase() === 'true';
     } else if (typeof data.value === 'string') {
-      connected = data.value.toUpperCase() === 'CONNECTED';
+      connected = (data.value as string).toUpperCase() === 'CONNECTED';
     } else if (typeof data.status === 'string') {
-      connected = data.status.toUpperCase() === 'CONNECTED';
+      connected = (data.status as string).toUpperCase() === 'CONNECTED';
     }
 
     res.json({
       connected,
       smartphoneConnected: data.smartphoneConnected ?? false,
       state: connected ? 'open' : 'close',
-      raw: data, // useful for debugging on frontend console
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown';
@@ -52,48 +84,68 @@ router.get('/status', async (_req: Request, res: Response): Promise<void> => {
 
 
 /**
- * GET /api/whatsapp/qr-code
- * Fetches QR code text from Z-API and generates a PNG data URL using the qrcode library.
+ * GET /api/whatsapp/qr-code?empresa_id=UUID
  */
-router.get('/qr-code', async (_req: Request, res: Response): Promise<void> => {
+router.get('/qr-code', async (req: Request, res: Response): Promise<void> => {
+  const empresaId = req.query.empresa_id as string;
+  if (!empresaId) {
+    res.status(400).json({ error: 'empresa_id é obrigatório' });
+    return;
+  }
+
+  const creds = await getZapiCredentials(empresaId);
+  if (!creds) {
+    res.status(404).json({ error: 'Integração Z-API não configurada para esta empresa', qrCode: null });
+    return;
+  }
+
   try {
-    const r = await fetch(`${ZAPI_BASE}/qr-code`, { headers: zapiHeaders });
+    const r = await fetch(`${zapiBase(creds)}/qr-code`, { headers: zapiHeaders(creds) });
 
     if (!r.ok) {
       const body = await r.text().catch(() => '');
       console.error(`[whatsapp] qr-code Z-API error ${r.status}: ${body.slice(0, 200)}`);
-      res.status(r.status).json({ error: `Z-API returned ${r.status}`, detail: body.slice(0, 200) });
+      res.status(r.status).json({ error: `Z-API returned ${r.status}`, qrCode: null });
       return;
     }
 
     const data = await r.json() as { value?: string };
-    const qrText = data.value;
-
-    if (!qrText) {
+    if (!data.value) {
       res.json({ qrCode: null });
       return;
     }
 
-    // Generate PNG data URL from the QR code text
-    const dataUrl = await QRCode.toDataURL(qrText, { width: 300, margin: 2 });
+    const dataUrl = await QRCode.toDataURL(data.value, { width: 300, margin: 2 });
     res.json({ qrCode: dataUrl });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown';
     console.error(`[whatsapp] qr-code error: ${msg}`);
-    res.status(500).json({ error: msg });
+    res.status(500).json({ error: msg, qrCode: null });
   }
 });
 
 
 /**
  * POST /api/whatsapp/disconnect
- * Disconnects the Z-API instance (logout).
+ * Body: { empresa_id: string }
  */
-router.post('/disconnect', async (_req: Request, res: Response): Promise<void> => {
+router.post('/disconnect', async (req: Request, res: Response): Promise<void> => {
+  const { empresa_id } = req.body as { empresa_id?: string };
+  if (!empresa_id) {
+    res.status(400).json({ error: 'empresa_id é obrigatório' });
+    return;
+  }
+
+  const creds = await getZapiCredentials(empresa_id);
+  if (!creds) {
+    res.status(404).json({ error: 'Integração Z-API não configurada para esta empresa' });
+    return;
+  }
+
   try {
-    const r = await fetch(`${ZAPI_BASE}/disconnect`, {
+    const r = await fetch(`${zapiBase(creds)}/disconnect`, {
       method: 'GET',
-      headers: zapiHeaders,
+      headers: zapiHeaders(creds),
     });
     const data = await r.json() as Record<string, unknown>;
     res.json(data);

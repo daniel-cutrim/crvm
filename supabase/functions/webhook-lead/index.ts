@@ -44,11 +44,11 @@ Deno.serve(async (req) => {
     const telefone = sanitize(body.telefone || body.phone || body.whatsapp);
     
     const url = new URL(req.url);
-    const clinica_id = url.searchParams.get("clinica_id") || body.clinica_id;
+    const empresa_id = url.searchParams.get("empresa_id") || body.empresa_id;
 
-    if (!nome || !telefone || !clinica_id) {
+    if (!nome || !telefone || !empresa_id) {
       return new Response(
-        JSON.stringify({ error: "Campos obrigatórios: nome, telefone e clinica_id" }),
+        JSON.stringify({ error: "Campos obrigatórios: nome, telefone e empresa_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -70,6 +70,18 @@ Deno.serve(async (req) => {
     // Funnel and Stage extraction
     const funil_id = sanitize(body.funil_id || body.pipeline_id || url.searchParams.get("funil_id") || url.searchParams.get("pipeline_id")) || null;
     const etapa_id = sanitize(body.etapa_id || body.stage_id || url.searchParams.get("etapa_id") || url.searchParams.get("stage_id")) || null;
+
+
+    // Custom fields: flat object of arbitrary key-value pairs (stored in metadata JSONB)
+    const metadata: Record<string, string> = {};
+    const rawMeta = body.custom_fields || body.metadata;
+    if (rawMeta && typeof rawMeta === 'object' && !Array.isArray(rawMeta)) {
+      for (const [key, val] of Object.entries(rawMeta)) {
+        const safeKey = String(key).replace(/[^a-zA-Z0-9_]/g, '').slice(0, 50);
+        const safeVal = sanitize(val);
+        if (safeKey && safeVal) metadata[safeKey] = safeVal;
+      }
+    }
 
     if (!funil_id || !etapa_id) {
       return new Response(
@@ -111,7 +123,7 @@ Deno.serve(async (req) => {
     const { data: existingLeads } = await supabase
       .from("leads")
       .select("id, telefone")
-      .eq("clinica_id", clinica_id)
+      .eq("empresa_id", empresa_id)
       .like("telefone", `%${last8.slice(0, 4)}%${last8.slice(4)}%`);
 
     const duplicate = existingLeads?.find((l: any) => {
@@ -134,6 +146,11 @@ Deno.serve(async (req) => {
          if (resolvedEtapaFunil !== "Novo Lead" || !funil_id) {
              updateData.etapa_funil = resolvedEtapaFunil;
          }
+      }
+
+      if (Object.keys(metadata).length > 0) {
+        // Merge new metadata into existing (do not overwrite existing keys)
+        updateData.metadata = metadata as any;
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -162,7 +179,7 @@ Deno.serve(async (req) => {
       // Insert tracking journey checkpoint for returning lead
       await supabase.from("lead_jornada").insert({
         lead_id: duplicate.id,
-        clinica_id: clinica_id,
+        empresa_id: empresa_id,
         plataforma: finalOrigem,
         utm_source,
         utm_medium,
@@ -188,7 +205,7 @@ Deno.serve(async (req) => {
     const { data: newLead, error } = await supabase
       .from("leads")
       .insert({
-        clinica_id,
+        empresa_id,
         nome,
         telefone: formattedPhone,
         email,
@@ -202,6 +219,7 @@ Deno.serve(async (req) => {
         utm_campaign,
         utm_term,
         utm_content,
+        metadata,
       })
       .select("id")
       .single();
@@ -219,7 +237,7 @@ Deno.serve(async (req) => {
     // Build tracking journey for the new lead
     await supabase.from("lead_jornada").insert({
       lead_id: newLead.id,
-      clinica_id: clinica_id,
+      empresa_id: empresa_id,
       plataforma: finalOrigem,
       utm_source,
       utm_medium,
@@ -276,7 +294,7 @@ Deno.serve(async (req) => {
         const { data: integracao } = await supabase
           .from("integracoes")
           .select("credentials")
-          .eq("clinica_id", clinica_id)
+          .eq("empresa_id", empresa_id)
           .eq("tipo", "uzapi")
           .eq("ativo", true)
           .limit(1)

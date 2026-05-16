@@ -3,6 +3,7 @@ import { Loader2, Wifi, WifiOff, Power, RefreshCw, Smartphone } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ConnectionState = 'open' | 'close' | 'unknown';
 
@@ -20,8 +21,12 @@ const serverHeaders: Record<string, string> = {
 };
 
 export default function WhatsAppManager() {
+  const { usuario } = useAuth();
+  const empresaId = usuario?.empresa_id;
+
   const [status, setStatus] = useState<ZapiStatus>({ connected: false, state: 'unknown' });
   const [loading, setLoading] = useState(true);
+  const [notConfigured, setNotConfigured] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
@@ -29,9 +34,16 @@ export default function WhatsAppManager() {
   const statusPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStatus = useCallback(async () => {
+    if (!empresaId) return false;
     try {
-      const res = await fetch(`${SERVER_URL}/api/whatsapp/status`, { headers: serverHeaders });
+      const res = await fetch(`${SERVER_URL}/api/whatsapp/status?empresa_id=${empresaId}`, { headers: serverHeaders });
+      if (res.status === 404) {
+        setNotConfigured(true);
+        setLoading(false);
+        return false;
+      }
       const data = await res.json() as ZapiStatus;
+      setNotConfigured(false);
       setStatus(data);
       return data.connected;
     } catch {
@@ -40,12 +52,13 @@ export default function WhatsAppManager() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [empresaId]);
 
   const fetchQrCode = useCallback(async () => {
+    if (!empresaId) return;
     setQrLoading(true);
     try {
-      const res = await fetch(`${SERVER_URL}/api/whatsapp/qr-code`, { headers: serverHeaders });
+      const res = await fetch(`${SERVER_URL}/api/whatsapp/qr-code?empresa_id=${empresaId}`, { headers: serverHeaders });
       const data = await res.json() as { qrCode?: string; error?: string };
       setQrCode(data.qrCode || null);
     } catch {
@@ -53,15 +66,12 @@ export default function WhatsAppManager() {
     } finally {
       setQrLoading(false);
     }
-  }, []);
+  }, [empresaId]);
 
   const startQrPolling = useCallback(() => {
     if (qrPollingRef.current) return;
-    fetchQrCode(); // Fetch immediately
-    // Refresh QR code every 20 seconds (Z-API QR expires)
-    qrPollingRef.current = setInterval(() => {
-      fetchQrCode();
-    }, 20000);
+    fetchQrCode();
+    qrPollingRef.current = setInterval(() => { fetchQrCode(); }, 20000);
   }, [fetchQrCode]);
 
   const stopQrPolling = useCallback(() => {
@@ -73,11 +83,12 @@ export default function WhatsAppManager() {
   }, []);
 
   useEffect(() => {
+    if (!empresaId) return;
+
     fetchStatus().then((connected) => {
       if (!connected) startQrPolling();
     });
 
-    // Poll status every 5s while disconnected to detect when QR is scanned
     statusPollingRef.current = setInterval(async () => {
       const connected = await fetchStatus();
       if (connected) {
@@ -91,15 +102,17 @@ export default function WhatsAppManager() {
       if (statusPollingRef.current) clearInterval(statusPollingRef.current);
       stopQrPolling();
     };
-  }, [fetchStatus, startQrPolling, stopQrPolling]);
+  }, [empresaId, fetchStatus, startQrPolling, stopQrPolling]);
 
   const handleDisconnect = async () => {
+    if (!empresaId) return;
     if (!confirm('Deseja realmente desconectar o WhatsApp?')) return;
     setDisconnecting(true);
     try {
       const res = await fetch(`${SERVER_URL}/api/whatsapp/disconnect`, {
         method: 'POST',
         headers: serverHeaders,
+        body: JSON.stringify({ empresa_id: empresaId }),
       });
       if (!res.ok) throw new Error('Erro ao desconectar');
       toast.success('WhatsApp desconectado. Escaneie o QR Code para reconectar.');
@@ -117,8 +130,40 @@ export default function WhatsAppManager() {
     toast.info('QR Code atualizado');
   };
 
-  if (loading) {
+  if (!empresaId || loading) {
     return <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (notConfigured) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Smartphone className="h-5 w-5 text-green-500" />
+            WhatsApp
+          </CardTitle>
+          <CardDescription className="mt-1">
+            Nenhuma instância Z-API configurada para esta empresa.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 border rounded-lg bg-muted/30 text-sm text-muted-foreground space-y-2">
+            <p className="font-medium text-foreground">Como configurar:</p>
+            <p>Insira as credenciais da sua instância Z-API no banco de dados:</p>
+            <pre className="bg-muted rounded p-3 text-xs overflow-x-auto">{`INSERT INTO public.integracoes (empresa_id, tipo, credentials, ativo)
+VALUES (
+  '${empresaId}',
+  'zapi',
+  '{"instanceId": "SEU_INSTANCE_ID",
+    "token": "SEU_TOKEN",
+    "clientToken": "SEU_CLIENT_TOKEN"}',
+  true
+);`}</pre>
+            <p>Após inserir, recarregue esta página.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

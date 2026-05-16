@@ -53,20 +53,20 @@ Deno.serve(async (req: Request) => {
       supabaseServiceKey
     );
 
-    // Get clinica_id of logging user
+    // Get empresa_id of logged-in user
     const { data: userData, error: userError } = await supabaseService
       .from('usuarios')
-      .select('clinica_id')
+      .select('empresa_id')
       .eq('auth_user_id', user.id)
       .single();
 
     if (userError || !userData) throw new Error("Usuário não encontrado.");
 
-    // Fetch tokens for this clinic
+    // Fetch tokens for this empresa
     let query = supabaseService
       .from('auth_google_agenda')
       .select('*')
-      .eq('clinica_id', userData.clinica_id);
+      .eq('empresa_id', userData.empresa_id);
       
     if (filter_dentista_id) {
       // Map filter_dentista_id (public.usuarios.id) to auth_user_id

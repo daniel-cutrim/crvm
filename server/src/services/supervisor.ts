@@ -11,18 +11,18 @@ async function getSupervisorConfig(conversationId: string): Promise<{
   salesScript: string;
 }> {
   try {
-    // Get clinica_id from conversation
+    // Get empresa_id from conversation
     const { data: conv } = await supabase
       .from('chat_conversas')
-      .select('clinica_id')
+      .select('empresa_id')
       .eq('id', conversationId)
       .single();
 
-    if (conv?.clinica_id) {
+    if (conv?.empresa_id) {
       const { data: cfg } = await supabase
         .from('supervisor_config')
         .select('system_prompt, sales_script')
-        .eq('clinica_id', conv.clinica_id)
+        .eq('empresa_id', conv.empresa_id)
         .maybeSingle();
 
       if (cfg) {

@@ -1,0 +1,738 @@
+openapi: 3.1.0
+
+info:
+  title: CRM SaaS API
+  version: "2.0.0"
+  description: |
+    API pública e interna do CRM SaaS multi-tenant.
+
+    **Autenticação:**
+    - Endpoints públicos de webhook usam `x-api-key`
+    - Endpoints autenticados usam `Authorization: Bearer {jwt}` (Supabase Auth)
+    - Webhooks recebidos de terceiros (Uzapi, Google) não têm autenticação própria
+
+servers:
+  - url: https://{project_id}.supabase.co/functions/v1
+    description: Supabase Edge Functions
+    variables:
+      project_id:
+        default: your-project-id
+        description: ID do projeto Supabase
+
+security: []
+
+tags:
+  - name: Leads
+    description: Captação e gestão de leads
+  - name: WhatsApp
+    description: Envio e recebimento de mensagens via Uzapi
+  - name: Automações
+    description: Follow-ups e lembretes automáticos via CRON
+  - name: Google Calendar
+    description: Integração com Google Calendar
+
+paths:
+
+  /webhook-lead:
+    post:
+      operationId: createLead
+      tags: [Leads]
+      summary: Criar lead via webhook
+      description: |
+        Endpoint público para captação de leads a partir de landing pages, formulários ou ferramentas externas (RD Station, etc.).
+
+        - Detecta leads duplicados pelo telefone (últimos 8 dígitos)
+        - Em duplicata: atualiza UTMs e registra checkpoint em `lead_jornada`
+        - Lead novo: cria conversa no chat e dispara boas-vindas via WhatsApp
+        - Campos personalizados por tenant são aceitos via `custom_fields`
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: empresa_id
+          in: query
+          description: ID da empresa (tenant). Pode ser enviado aqui ou no body.
+          schema:
+            type: string
+            format: uuid
+        - name: funil_id
+          in: query
+          description: ID do funil de destino. Pode ser enviado aqui ou no body.
+          schema:
+            type: string
+            format: uuid
+        - name: etapa_id
+          in: query
+          description: ID da etapa inicial. Pode ser enviado aqui ou no body.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadWebhookInput'
+            examples:
+              completo:
+                summary: Lead com UTMs e campos personalizados
+                value:
+                  nome: "João Silva"
+                  telefone: "(21) 99999-8888"
+                  empresa_id: "550e8400-e29b-41d4-a716-446655440000"
+                  funil_id: "550e8400-e29b-41d4-a716-446655440001"
+                  etapa_id: "550e8400-e29b-41d4-a716-446655440002"
+                  email: "joao@email.com"
+                  interesse: "Plano Enterprise"
+                  utm_source: "google"
+                  utm_medium: "cpc"
+                  utm_campaign: "campanha-q2-2026"
+                  custom_fields:
+                    segmento: "SaaS"
+                    cargo: "Head de Vendas"
+              minimo:
+                summary: Lead mínimo (só campos obrigatórios via query)
+                value:
+                  nome: "Maria Souza"
+                  telefone: "21999887766"
+      responses:
+        '201':
+          description: Lead criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadWebhookCreated'
+        '200':
+          description: Lead duplicado — telefone já existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadWebhookDuplicate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /webhook-uzapi:
+    post:
+      operationId: receiveWhatsAppMessage
+      tags: [WhatsApp]
+      summary: Receber mensagem WhatsApp (Uzapi → CRM)
+      description: |
+        Webhook chamado pela Uzapi ao receber uma mensagem de WhatsApp.
+        Registrado automaticamente ao criar uma instância via `uzapi-manager`.
+        **Não requer autenticação** — a validação é feita pelo `instanceName` na tabela `integracoes`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UzapiWebhookPayload'
+      responses:
+        '200':
+          description: Mensagem processada ou evento ignorado
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SuccessTrue'
+                  - $ref: '#/components/schemas/IgnoredEvent'
+        '404':
+          description: Instância não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /uzapi-manager:
+    post:
+      operationId: manageWhatsAppInstance
+      tags: [WhatsApp]
+      summary: Gerenciar instâncias WhatsApp por tenant
+      description: |
+        Cria, consulta e desconecta instâncias Uzapi por tenant/setor.
+        Requer autenticação JWT de usuário administrador.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UzapiManagerInput'
+            examples:
+              criar:
+                summary: Criar instância
+                value:
+                  action: create_instance
+                  setorId: "550e8400-e29b-41d4-a716-446655440010"
+              qr_code:
+                summary: Obter QR Code
+                value:
+                  action: get_qr_code
+                  instanceName: "inst_empresa_setor_17112345"
+              status:
+                summary: Verificar conexão
+                value:
+                  action: check_connection
+                  instanceName: "inst_empresa_setor_17112345"
+              logout:
+                summary: Desconectar
+                value:
+                  action: logout
+                  instanceName: "inst_empresa_setor_17112345"
+      responses:
+        '200':
+          description: Ação executada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UzapiManagerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /send-message:
+    post:
+      operationId: sendWhatsAppMessage
+      tags: [WhatsApp]
+      summary: Enviar mensagem de texto ou áudio via WhatsApp
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageInput'
+            examples:
+              texto:
+                summary: Mensagem de texto
+                value:
+                  phone: "5521999887766"
+                  message: "Olá! Sua reunião é amanhã às 14h."
+                  empresa_id: "550e8400-e29b-41d4-a716-446655440000"
+                  type: text
+              audio:
+                summary: Mensagem de áudio
+                value:
+                  phone: "5521999887766"
+                  audio_url: "https://storage.supabase.co/audio/exemplo.ogg"
+                  empresa_id: "550e8400-e29b-41d4-a716-446655440000"
+                  type: audio
+      responses:
+        '200':
+          description: Mensagem enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendMessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /send-lead-followup:
+    post:
+      operationId: sendLeadFollowup
+      tags: [Automações]
+      summary: Disparar follow-up automático para leads inativos
+      description: |
+        Executada via CRON (Supabase Scheduler). Envia mensagem de follow-up para leads
+        inativos há mais de 24h que ainda aguardam resposta.
+
+        **Critérios:**
+        - Última mensagem foi enviada por nós (`from_me = true`) há mais de 24h
+        - Lead em etapa "Novo Lead" ou "Em Contato"
+        - Follow-up ainda não enviado
+      security:
+        - ServiceRoleAuth: []
+      responses:
+        '200':
+          description: Execução concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CronResult'
+
+  /send-appointment-reminders:
+    post:
+      operationId: sendAppointmentReminders
+      tags: [Automações]
+      summary: Disparar lembretes automáticos de compromissos
+      description: |
+        Executada a cada 15 minutos via CRON. Envia lembretes de compromissos
+        agendados para 1h e 24h à frente.
+      security:
+        - ServiceRoleAuth: []
+      responses:
+        '200':
+          description: Execução concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CronResult'
+
+  /google-calendar-auth:
+    post:
+      operationId: generateGoogleAuthUrl
+      tags: [Google Calendar]
+      summary: Gerar URL de autorização Google Calendar
+      description: |
+        Inicia o fluxo OAuth 2.0 do Google Calendar. Retorna a URL para onde
+        o frontend deve redirecionar o usuário.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, empresa_id]
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                  description: ID do usuário no Supabase Auth
+                empresa_id:
+                  type: string
+                  format: uuid
+                  description: ID da empresa do usuário
+      responses:
+        '200':
+          description: URL de autorização gerada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    description: URL do Google OAuth para redirect do frontend
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      operationId: handleGoogleAuthCallback
+      tags: [Google Calendar]
+      summary: Callback OAuth do Google (chamado automaticamente pelo Google)
+      description: |
+        Recebe o código de autorização do Google após o usuário autorizar.
+        Troca o código por tokens e salva em `auth_google_agenda`.
+        Redireciona para o frontend ao final.
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: error
+          in: query
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirecionamento para o frontend (sucesso ou erro)
+
+  /google-calendar-sync:
+    post:
+      operationId: syncGoogleCalendar
+      tags: [Google Calendar]
+      summary: Buscar eventos do Google Calendar para a agenda do CRM
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [timeMin, timeMax]
+              properties:
+                timeMin:
+                  type: string
+                  format: date-time
+                  description: Início do período (ISO 8601)
+                timeMax:
+                  type: string
+                  format: date-time
+                  description: Fim do período (ISO 8601)
+                filter_dentista_id:
+                  type: string
+                  format: uuid
+                  description: Filtra eventos de um usuário específico (opcional)
+            example:
+              timeMin: "2026-05-01T00:00:00Z"
+              timeMax: "2026-05-31T23:59:59Z"
+      responses:
+        '200':
+          description: Lista de eventos do Google Calendar formatados para o CRM
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GoogleCalendarEvent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Chave configurada no secret `WEBHOOK_LEAD_API_KEY` do Supabase
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT do Supabase Auth (`access_token` da sessão do usuário)
+    ServiceRoleAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Service Role Key do Supabase (uso exclusivo de CRONs internos)
+
+  schemas:
+
+    LeadWebhookInput:
+      type: object
+      required: [nome, telefone]
+      properties:
+        nome:
+          type: string
+          description: Nome completo do lead
+          example: João Silva
+        telefone:
+          type: string
+          description: Telefone em qualquer formato
+          example: "(21) 99999-8888"
+        empresa_id:
+          type: string
+          format: uuid
+          description: ID da empresa (tenant). Obrigatório aqui ou na query string.
+        funil_id:
+          type: string
+          format: uuid
+          description: ID do funil de destino. Obrigatório aqui ou na query string.
+        etapa_id:
+          type: string
+          format: uuid
+          description: ID da etapa inicial. Obrigatório aqui ou na query string.
+        email:
+          type: string
+          format: email
+          nullable: true
+        origem:
+          type: string
+          nullable: true
+          description: Origem descritiva do lead (texto livre)
+          example: "Landing Page"
+        interesse:
+          type: string
+          nullable: true
+          description: Produto ou serviço de interesse
+          example: "Plano Enterprise"
+        utm_source:
+          type: string
+          nullable: true
+          example: "google"
+        utm_medium:
+          type: string
+          nullable: true
+          example: "cpc"
+        utm_campaign:
+          type: string
+          nullable: true
+          example: "campanha-q2-2026"
+        utm_term:
+          type: string
+          nullable: true
+          example: "crm saas"
+        utm_content:
+          type: string
+          nullable: true
+          example: "banner-hero"
+        custom_fields:
+          type: object
+          description: |
+            Campos personalizados livres do tenant. Objeto plano de chave → valor string.
+            Chaves: apenas alfanuméricos e underscore (máx. 50 chars).
+            Valores: sanitizados e truncados em 500 chars.
+          additionalProperties:
+            type: string
+          example:
+            segmento: "SaaS"
+            cargo: "Head de Vendas"
+            tamanho_empresa: "50-200"
+
+    LeadWebhookCreated:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [created]
+        lead_id:
+          type: string
+          format: uuid
+        conversa_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    LeadWebhookDuplicate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [duplicate]
+        lead_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+          example: "Lead já existe, Tracking Rastreamento Inserido."
+
+    UzapiWebhookPayload:
+      type: object
+      properties:
+        event:
+          type: string
+          example: "messages.upsert"
+        instance:
+          type: string
+          description: Nome da instância Uzapi (usado para identificar o tenant)
+          example: "inst_empresa123_setor1_1711234567890"
+        data:
+          type: object
+          properties:
+            messages:
+              type: array
+              items:
+                type: object
+
+    UzapiManagerInput:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [create_instance, get_qr_code, check_connection, logout]
+        setorId:
+          type: string
+          format: uuid
+          description: Obrigatório para `create_instance`
+        instanceName:
+          type: string
+          description: Obrigatório para `get_qr_code`, `check_connection`, `logout`
+
+    UzapiManagerResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        instance:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            empresa_id:
+              type: string
+              format: uuid
+            setor_id:
+              type: string
+              format: uuid
+              nullable: true
+            tipo:
+              type: string
+              example: "uzapi"
+            credentials:
+              type: object
+              properties:
+                instanceName:
+                  type: string
+                token:
+                  type: string
+                hash:
+                  type: string
+        qrcode:
+          type: object
+          nullable: true
+          properties:
+            base64:
+              type: string
+              description: QR Code em base64 (data:image/png;base64,...)
+        base64:
+          type: string
+          nullable: true
+          description: QR Code em base64 (para ação `get_qr_code`)
+        state:
+          type: string
+          nullable: true
+          enum: [open, close, connecting]
+          description: Estado da conexão (para ação `check_connection`)
+
+    SendMessageInput:
+      type: object
+      required: [phone, empresa_id]
+      properties:
+        phone:
+          type: string
+          description: Telefone do destinatário (formato E.164 recomendado)
+          example: "5521999887766"
+        empresa_id:
+          type: string
+          format: uuid
+        setor_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Seleciona a instância correta quando há múltiplas por empresa
+        conversa_id:
+          type: string
+          format: uuid
+          nullable: true
+        type:
+          type: string
+          enum: [text, audio]
+          default: text
+        message:
+          type: string
+          description: Obrigatório para type=text
+          example: "Olá! Sua reunião é amanhã às 14h."
+        audio_url:
+          type: string
+          format: uri
+          description: Obrigatório para type=audio
+          example: "https://storage.supabase.co/audio/exemplo.ogg"
+
+    SendMessageResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [sent]
+        messageId:
+          type: string
+          example: "BAE5XXXX"
+        conversa_id:
+          type: string
+          format: uuid
+
+    CronResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        sent:
+          type: integer
+          description: Número de mensagens enviadas
+        skipped:
+          type: integer
+          description: Número de registros ignorados (critérios não atendidos)
+
+    GoogleCalendarEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "google_abc123def456"
+        is_google:
+          type: boolean
+          example: true
+        dentista_id:
+          type: string
+          format: uuid
+          description: auth_user_id do usuário dono do evento
+        data_hora:
+          type: string
+          format: date-time
+        duracao_minutos:
+          type: integer
+          example: 60
+        tipo_procedimento:
+          type: string
+          description: Título do evento no Google Calendar
+          example: "Reunião de equipe"
+        status:
+          type: string
+          example: "Agendada"
+        observacoes:
+          type: string
+          nullable: true
+        google_event_url:
+          type: string
+          format: uri
+          nullable: true
+
+    SuccessTrue:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+
+    IgnoredEvent:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ignored event"
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+  responses:
+
+    BadRequest:
+      description: Campos obrigatórios ausentes ou inválidos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Campos obrigatórios: nome, telefone e empresa_id"
+
+    Unauthorized:
+      description: Autenticação inválida ou ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized: invalid or missing x-api-key header"
+
+    Forbidden:
+      description: Acesso negado (empresa_id mismatch ou permissão insuficiente)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden: empresa_id mismatch"
+
+    InternalError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal server error"

@@ -15,14 +15,14 @@ function validateApiKey(req: Request, res: Response, next: () => void): void {
 
 router.use(validateApiKey);
 
-/** GET /api/supervisor-config/:clinicaId */
-router.get('/:clinicaId', async (req: Request, res: Response): Promise<void> => {
-  const { clinicaId } = req.params;
+/** GET /api/supervisor-config/:empresaId */
+router.get('/:empresaId', async (req: Request, res: Response): Promise<void> => {
+  const { empresaId } = req.params;
 
   const { data, error } = await supabase
     .from('supervisor_config')
     .select('*')
-    .eq('clinica_id', clinicaId)
+    .eq('empresa_id', empresaId)
     .maybeSingle();
 
   if (error) {
@@ -30,11 +30,10 @@ router.get('/:clinicaId', async (req: Request, res: Response): Promise<void> => 
     return;
   }
 
-  // If no config exists, return defaults
   if (!data) {
     res.json({
-      clinica_id: clinicaId,
-      system_prompt: `Você é uma supervisora de vendas experiente em clínicas odontológicas. Analise o histórico da conversa entre um atendente e um lead, e oriente o próximo passo do atendente de forma direta e objetiva.
+      empresa_id: empresaId,
+      system_prompt: `Você é uma supervisora de vendas experiente. Analise o histórico da conversa entre um atendente e um lead, e oriente o próximo passo do atendente de forma direta e objetiva.
 
 Regras:
 - Seja direta. Máximo 3 frases.
@@ -52,9 +51,9 @@ Regras:
   res.json(data);
 });
 
-/** PUT /api/supervisor-config/:clinicaId */
-router.put('/:clinicaId', async (req: Request, res: Response): Promise<void> => {
-  const { clinicaId } = req.params;
+/** PUT /api/supervisor-config/:empresaId */
+router.put('/:empresaId', async (req: Request, res: Response): Promise<void> => {
+  const { empresaId } = req.params;
   const { system_prompt, sales_script, enabled } = req.body;
 
   if (typeof system_prompt !== 'string' || typeof sales_script !== 'string') {
@@ -62,17 +61,16 @@ router.put('/:clinicaId', async (req: Request, res: Response): Promise<void> => 
     return;
   }
 
-  // Upsert: insert or update
   const { data, error } = await supabase
     .from('supervisor_config')
     .upsert(
       {
-        clinica_id: clinicaId,
+        empresa_id: empresaId,
         system_prompt,
         sales_script,
         enabled: enabled ?? true,
       },
-      { onConflict: 'clinica_id' }
+      { onConflict: 'empresa_id' }
     )
     .select()
     .single();

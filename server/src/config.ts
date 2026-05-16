@@ -11,11 +11,8 @@ export const config = {
   deepseekApiKey: process.env.DEEPSEEK_API_KEY || '',
   deepseekModel: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
 
-  zapiInstanceId: process.env.ZAPI_INSTANCE_ID || '',
-  zapiToken: process.env.ZAPI_TOKEN || '',
-  zapiClientToken: process.env.ZAPI_CLIENT_TOKEN || '',
-
-  defaultClinicaId: process.env.DEFAULT_CLINICA_ID || '',
+  // Used as fallback when the webhook doesn't match any integracoes record
+  defaultEmpresaId: process.env.DEFAULT_EMPRESA_ID || '',
 
   // CORS: comma-separated allowed origins. Use '*' for dev
   corsOrigins: process.env.CORS_ORIGINS || '*',
@@ -29,7 +26,7 @@ export function validateConfig() {
     'supabaseUrl',
     'supabaseServiceRoleKey',
     'deepseekApiKey',
-    'defaultClinicaId',
+    'defaultEmpresaId',
   ];
 
   for (const key of required) {
@@ -37,10 +34,6 @@ export function validateConfig() {
       console.error(`[config] Missing required env var: ${key}`);
       process.exit(1);
     }
-  }
-
-  if (!config.zapiClientToken) {
-    console.warn('[config] ZAPI_CLIENT_TOKEN not set — webhook auth disabled (dangerous in production)');
   }
 
   if (!config.apiKey) {
